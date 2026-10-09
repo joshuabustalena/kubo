@@ -1,26 +1,208 @@
 @import "tailwindcss";
 
+/* -------------------------------------------------------------------------
+   Kainan sa Kubo design tokens
+   Bamboo, forest green, warm wood, golden rice and terracotta on cream.
+   ------------------------------------------------------------------------- */
+@theme {
+  --color-cream-50: #fdf9f1;
+  --color-cream-100: #f8f1e3;
+  --color-cream-200: #f1e6cf;
+  --color-cream-300: #e7d7b6;
+
+  --color-bamboo-200: #e8d3a6;
+  --color-bamboo-300: #d9bd85;
+  --color-bamboo-400: #c9a66b;
+  --color-bamboo-500: #b08d57;
+  --color-bamboo-600: #8f7043;
+
+  --color-leaf-50: #eef4e6;
+  --color-leaf-100: #dbe8cb;
+  --color-leaf-500: #5e8c31;
+  --color-leaf-600: #4a7326;
+  --color-leaf-700: #3a5c1e;
+
+  --color-forest-600: #2c5a3c;
+  --color-forest-700: #234a31;
+  --color-forest-800: #1f3d2b;
+  --color-forest-900: #152a1d;
+
+  --color-wood-300: #b98a62;
+  --color-wood-500: #8a5a35;
+  --color-wood-600: #6b4226;
+  --color-wood-700: #55341d;
+  --color-wood-800: #3e2614;
+
+  --color-gold-100: #fbefc9;
+  --color-gold-300: #f2cc63;
+  --color-gold-400: #e8b53a;
+  --color-gold-500: #e0a526;
+  --color-gold-700: #9a6c0c;
+
+  --color-terracotta-100: #f6dfd3;
+  --color-terracotta-500: #b85c38;
+  --color-terracotta-600: #9c4a2a;
+  --color-terracotta-700: #7f3a20;
+
+  --color-ink: #2a2118;
+  --color-ink-soft: #5c4d3e;
+  --color-ink-muted: #7a6a58;
+
+  --font-display: var(--font-baloo), ui-rounded, "Trebuchet MS", sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 1.1rem;
+  --shadow-card: 0 1px 0 rgb(107 66 38 / 0.08), 0 8px 24px -12px rgb(62 38 20 / 0.25);
+  --shadow-lift: 0 2px 0 rgb(107 66 38 / 0.1), 0 14px 30px -14px rgb(62 38 20 / 0.35);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-cream-100);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Faint woven-mat texture */
+  background-image:
+    repeating-linear-gradient(45deg, rgb(176 141 87 / 0.045) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, rgb(176 141 87 / 0.045) 0 2px, transparent 2px 14px);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* -------------------------------------------------------------------------
+   Bamboo scrollbar
+   Chrome / Edge / Safari: a bamboo stalk thumb (cylinder shading + node
+   rings) on a woven cream track. Firefox only supports flat colours, so it
+   gets bamboo-on-cream via scrollbar-color.
+   ------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+::-webkit-scrollbar-track {
+  background-color: #efe2c4;
+  background-image:
+    repeating-linear-gradient(0deg, rgb(143 112 67 / 0.12) 0 3px, transparent 3px 6px),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.35) 0 3px, transparent 3px 6px);
+  border-left: 1px solid rgb(176 141 87 / 0.35);
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: #c9a66b;
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 38px, rgb(120 90 48 / 0.85) 38px 40px, rgb(255 250 235 / 0.6) 40px 42px, transparent 42px 44px),
+    linear-gradient(90deg, #9c7c44 0%, #d4b47a 22%, #efdcb0 40%, #d9bd85 60%, #a8844d 100%);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 38px, rgb(120 90 48 / 0.85) 38px 40px, rgb(255 250 235 / 0.6) 40px 42px, transparent 42px 44px),
+    linear-gradient(90deg, #8f7043 0%, #c9a66b 22%, #e8d3a6 40%, #c9a66b 60%, #8f7043 100%);
+}
+::-webkit-scrollbar-thumb:horizontal {
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgb(120 90 48 / 0.85) 38px 40px, rgb(255 250 235 / 0.6) 40px 42px, transparent 42px 44px),
+    linear-gradient(180deg, #9c7c44 0%, #d4b47a 22%, #efdcb0 40%, #d9bd85 60%, #a8844d 100%);
+}
+::-webkit-scrollbar-corner {
+  background: #efe2c4;
+}
+/* Only Firefox: Chrome would drop the ::-webkit styles above if this applied to it */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: #b08d57 #efe2c4;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-gold-400);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Natural paper card */
+  .paper {
+    background-color: var(--color-cream-50);
+    border: 1px solid rgb(176 141 87 / 0.28);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Horizontal bamboo pole used as a divider / header trim */
+  .bamboo-pole {
+    height: 10px;
+    border-radius: 999px;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.35), transparent 45%, rgb(62 38 20 / 0.18)),
+      repeating-linear-gradient(90deg, var(--color-bamboo-300) 0 62px, var(--color-bamboo-600) 62px 64px, var(--color-bamboo-300) 64px 66px);
+  }
+
+  /* Woven panel for hero / section backgrounds */
+  .woven {
+    background-color: var(--color-bamboo-200);
+    background-image:
+      repeating-linear-gradient(0deg, rgb(143 112 67 / 0.18) 0 6px, transparent 6px 12px),
+      repeating-linear-gradient(90deg, rgb(255 255 255 / 0.25) 0 6px, transparent 6px 12px);
+  }
+
+  /* Wood counter (POS + footer) */
+  .wood {
+    background-color: var(--color-wood-700);
+    background-image:
+      repeating-linear-gradient(176deg, rgb(255 255 255 / 0.035) 0 3px, transparent 3px 11px),
+      repeating-linear-gradient(181deg, rgb(0 0 0 / 0.08) 0 1px, transparent 1px 23px);
+    color: var(--color-cream-100);
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Receipt printing: only the receipt is printed, on 58/80 mm paper */
+@media print {
+  @page {
+    margin: 4mm;
+  }
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .receipt {
+    box-shadow: none !important;
+    border: 0 !important;
+    width: 72mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+  }
+}
+.print-only {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
