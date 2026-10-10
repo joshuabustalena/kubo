@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { callGame, GameError, ResultDialog, type GameResult } from "./shared";
+import { callGame, GameError, ResultDialog, type GameResult, useGameLocked } from "./shared";
 
 type Item = { i: number; t: number; x: number; k: "rice" | "gold" | "rock" };
 type Start = { session_id: string; started_at: string; resumed: boolean; state: { duration_seconds: number; items: Item[] } };
@@ -14,6 +14,7 @@ const TRAY_W = 0.22; // fraction of width
 const EMOJI = { rice: "🍚", gold: "⭐", rock: "🪨" } as const;
 
 export function CatchGame() {
+  const locked = useGameLocked();
   const [session, setSession] = useState<Start | null>(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -161,7 +162,7 @@ export function CatchGame() {
         {error ? <GameError message={error.message} cooldown={error.cooldown} /> : null}
         <div className="paper p-6 text-center">
           <p className="text-ink-soft">Drag (or use ← →) to move the tray. 🍚 = 1, ⭐ = 3, 🪨 = −2.</p>
-          <Button size="lg" className="mt-4" onClick={start} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : null} Start round</Button>
+          <Button size="lg" className="mt-4" onClick={start} disabled={busy || locked}>{busy ? <Loader2 className="animate-spin" /> : null} Start round</Button>
         </div>
         <ResultDialog result={result} onClose={() => setResult(null)} />
       </div>

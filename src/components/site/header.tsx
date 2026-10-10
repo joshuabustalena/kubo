@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
+import { InstallAppButton } from "@/components/pwa/install-app";
 import { CartButton } from "./cart-button";
 import { SiteMobileMenu } from "./mobile-menu";
 
@@ -28,6 +29,8 @@ export async function SiteHeader() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
+          {/* Desktop: install in the header. Phones: it's in the ☰ menu */}
+          <InstallAppButton className="hidden h-9 gap-1.5 rounded-xl bg-gold-400 px-3 text-sm font-bold text-wood-800 hover:bg-gold-300 md:inline-flex [&_svg]:size-4" />
           {user && user.role !== "customer" ? (
             <ButtonLink href={user.role === "admin" ? "/admin" : "/pos"} variant="ghost" size="sm" className="hidden sm:inline-flex">
               {user.role === "admin" ? <LayoutDashboard /> : <Store />}

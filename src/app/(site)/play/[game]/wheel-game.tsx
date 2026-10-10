@@ -4,11 +4,12 @@ import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { callGame, GameError, ResultDialog, type GameResult } from "./shared";
+import { callGame, GameError, ResultDialog, type GameResult, useGameLocked } from "./shared";
 
 const COLORS = ["#1f3d2b", "#e8b53a", "#6b4226", "#5e8c31", "#b85c38", "#c9a66b", "#2c5a3c", "#9a6c0c"];
 
 export function WheelGame({ prizes }: { prizes: { id: string; label: string; prize_type: string }[] }) {
+  const locked = useGameLocked();
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<GameResult | null>(null);
@@ -77,7 +78,7 @@ export function WheelGame({ prizes }: { prizes: { id: string; label: string; pri
             <path d="M0 -142 L-13 -166 L13 -166 Z" fill="#b85c38" stroke="#fdf9f1" strokeWidth="2" />
           </svg>
         </div>
-        <Button size="lg" variant="gold" className="mt-4 min-w-48" onClick={spin} disabled={spinning || prizes.length === 0}>
+        <Button size="lg" variant="gold" className="mt-4 min-w-48" onClick={spin} disabled={spinning || locked || prizes.length === 0}>
           {spinning ? <Loader2 className="animate-spin" /> : null}
           {spinning ? "Spinning…" : "Spin the wheel"}
         </Button>

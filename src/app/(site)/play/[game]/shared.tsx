@@ -1,6 +1,7 @@
 "use client";
 
 import { Gift, PartyPopper, RotateCcw, Sparkles } from "lucide-react";
+import { createContext, useContext, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -19,6 +20,17 @@ export type GameResult = {
   correct_answers?: { id: string; correct: number }[] | null;
   slice_index?: number;
 };
+
+const GameLock = createContext(false);
+
+/**
+ * Wraps a game. When the player has no tokens left the start button is disabled, but the
+ * game itself stays mounted, so the result of the round that used the last token still shows.
+ */
+export function GameLockProvider({ locked, children }: { locked: boolean; children: ReactNode }) {
+  return <GameLock.Provider value={locked}>{children}</GameLock.Provider>;
+}
+export const useGameLocked = () => useContext(GameLock);
 
 /** Calls a game RPC as the signed-in player and normalises errors. */
 export async function callGame<T>(fn: string, args?: Record<string, unknown>): Promise<{ data?: T; error?: string; cooldown?: number }> {

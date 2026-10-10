@@ -10,6 +10,7 @@ import { peso } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Game, GamePrize } from "@/lib/types";
 import { CatchGame } from "./catch-game";
+import { GameLockProvider } from "./shared";
 import { MemoryGame } from "./memory-game";
 import { QuizGame } from "./quiz-game";
 import { WheelGame } from "./wheel-game";
@@ -29,6 +30,7 @@ export default async function GamePage(props: PageProps<"/play/[game]">) {
   if (!game) notFound();
   const g = game as Game;
   const prizeList = (prizes ?? []) as GamePrize[];
+  const locked = cost > 0 && user.game_tokens < cost;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -42,21 +44,27 @@ export default async function GamePage(props: PageProps<"/play/[game]">) {
           You have {user.game_tokens} token{user.game_tokens === 1 ? "" : "s"} · each round uses {cost}
         </p>
       ) : null}
-      {g.is_enabled && cost > 0 && user.game_tokens < cost ? (
-        <Alert tone="warning" title="You need a game token to play">
+      {g.is_enabled && locked ? (
+        <Alert tone="warning" title="You need a game token to play" className="mb-4">
           Earn tokens when you buy meals: {peso(settings.points_price_threshold)} and below = {settings.points_at_or_below} token, above = {settings.points_above} tokens per meal.
           <div className="mt-3"><ButtonLink href="/menu" size="sm">Order now</ButtonLink></div>
         </Alert>
-      ) : !g.is_enabled ? (
+      ) : null}
+      {!g.is_enabled ? (
         <Alert tone="warning" title="This game is closed right now.">Try another game in the Play Zone.</Alert>
-      ) : code === "wheel" ? (
-        <WheelGame prizes={prizeList.map((p) => ({ id: p.id, label: p.label, prize_type: p.prize_type }))} />
-      ) : code === "memory" ? (
-        <MemoryGame />
-      ) : code === "quiz" ? (
-        <QuizGame />
       ) : (
-        <CatchGame />
+        // Always mounted, even with no tokens left, so the result dialog of the last round stays open
+        <GameLockProvider locked={locked}>
+          {code === "wheel" ? (
+            <WheelGame prizes={prizeList.map((p) => ({ id: p.id, label: p.label, prize_type: p.prize_type }))} />
+          ) : code === "memory" ? (
+            <MemoryGame />
+          ) : code === "quiz" ? (
+            <QuizGame />
+          ) : (
+            <CatchGame />
+          )}
+        </GameLockProvider>
       )}
       {code !== "wheel" && prizeList.some((p) => p.prize_type !== "none") ? (
         <div className="paper mt-6 p-5">

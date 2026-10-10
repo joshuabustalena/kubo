@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { callGame, GameError, ResultDialog, type GameResult } from "./shared";
+import { callGame, GameError, ResultDialog, type GameResult, useGameLocked } from "./shared";
 
 type Question = { id: string; question: string; choices: string[] };
 type Start = { session_id: string; expires_at: string; state: { questions: Question[]; time_limit_seconds: number } };
 
 export function QuizGame() {
+  const locked = useGameLocked();
   const [session, setSession] = useState<Start | null>(null);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [current, setCurrent] = useState(0);
@@ -87,7 +88,7 @@ export function QuizGame() {
         {error ? <GameError message={error.message} cooldown={error.cooldown} /> : null}
         <div className="paper p-6 text-center">
           <p className="text-ink-soft">5 questions · 2 minutes. Answers are checked by our server.</p>
-          <Button size="lg" className="mt-4" onClick={start} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : null} Start quiz</Button>
+          <Button size="lg" className="mt-4" onClick={start} disabled={busy || locked}>{busy ? <Loader2 className="animate-spin" /> : null} Start quiz</Button>
         </div>
       </div>
     );

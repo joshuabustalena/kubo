@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { callGame, GameError, ResultDialog, type GameResult } from "./shared";
+import { callGame, GameError, ResultDialog, type GameResult, useGameLocked } from "./shared";
 
 const FACES: Record<string, { emoji: string; label: string }> = {
   rice: { emoji: "🍚", label: "Java Rice" },
@@ -22,6 +22,7 @@ type Start = { session_id: string; state: { cards: number; matched?: number[]; m
 type Flip = { index: number; symbol: string; first: boolean; other_index?: number; match?: boolean; moves?: number; done?: boolean; expired?: boolean };
 
 export function MemoryGame() {
+  const locked = useGameLocked();
   const [session, setSession] = useState<Start | null>(null);
   const [faces, setFaces] = useState<Record<number, string>>({});
   const [matched, setMatched] = useState<Set<number>>(new Set());
@@ -95,7 +96,7 @@ export function MemoryGame() {
         {error ? <GameError message={error.message} cooldown={error.cooldown} /> : null}
         <div className="paper p-6 text-center">
           <p className="text-ink-soft">16 cards, 8 pairs, 3 minutes. Fewer moves = higher score.</p>
-          <Button size="lg" className="mt-4" onClick={start} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : null} Start game</Button>
+          <Button size="lg" className="mt-4" onClick={start} disabled={busy || locked}>{busy ? <Loader2 className="animate-spin" /> : null} Start game</Button>
         </div>
         <ResultDialog result={result} onClose={() => setResult(null)} />
       </div>

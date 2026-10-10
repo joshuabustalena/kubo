@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Share, SquarePlus } from "lucide-react";
+import { Download, EllipsisVertical, Share, SquarePlus } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -57,19 +57,20 @@ export function RegisterServiceWorker() {
 /**
  * "Install app" button. Android/desktop Chrome: opens the browser's install prompt.
  * iPhone/iPad: shows the Share → Add to Home Screen steps (Safari has no prompt).
- * Hidden when already installed or when the browser can't install.
+ * Other browsers (no one-tap install offered yet): shows the browser-menu steps.
+ * Hidden only when the site is already running as the installed app.
  */
 export function InstallAppButton({ className, label = "Install app" }: { className?: string; label?: string }) {
   const mode = useSyncExternalStore(subscribe, getMode, () => "server" as Mode);
   const canPrompt = useSyncExternalStore(subscribe, () => deferred !== null, () => false);
   const [iosHelp, setIosHelp] = useState(false);
+  const [browserHelp, setBrowserHelp] = useState(false);
 
   if (mode === "server" || mode === "installed") return null;
-  if (mode === "other" && !canPrompt) return null;
 
   const onClick = async () => {
     if (mode === "ios") return setIosHelp(true);
-    if (!deferred) return;
+    if (!canPrompt || !deferred) return setBrowserHelp(true);
     await deferred.prompt();
     await deferred.userChoice;
     deferred = null;
@@ -100,6 +101,28 @@ export function InstallAppButton({ className, label = "Install app" }: { classNa
           <li className="flex items-start gap-3">
             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-forest-800 font-bold text-cream-50">3</span>
             <span>Tap <b>Add</b>. The Kainan sa Kubo icon appears on your Home Screen.</span>
+          </li>
+        </ol>
+      </Dialog>
+      <Dialog
+        open={browserHelp}
+        onClose={() => setBrowserHelp(false)}
+        title="Install Kainan sa Kubo"
+        description="Add the app to your phone or computer. It opens in its own window, like a normal app."
+        footer={<Button onClick={() => setBrowserHelp(false)}>Got it</Button>}
+      >
+        <ol className="space-y-3 text-sm">
+          <li className="flex items-start gap-3">
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-forest-800 font-bold text-cream-50">1</span>
+            <span>Open the browser menu <EllipsisVertical className="inline size-4 align-text-bottom" /> (top right in Chrome or Edge). On a computer you can also click the install icon at the right end of the address bar.</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-forest-800 font-bold text-cream-50">2</span>
+            <span>Choose <b>Install app</b> (or <b>Add to Home screen</b>).</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-forest-800 font-bold text-cream-50">3</span>
+            <span>Tap <b>Install</b>. If you opened this link inside Facebook or Messenger, open it in Chrome or Safari first.</span>
           </li>
         </ol>
       </Dialog>

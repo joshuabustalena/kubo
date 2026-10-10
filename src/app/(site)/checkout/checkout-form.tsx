@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, Loader2, ShoppingBag, Sparkles, Utensils } from "lucide-react";
+import { Loader2, ShoppingBag, Sparkles, Utensils } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -110,7 +110,7 @@ export function CheckoutForm({ user, methods, onlineEnabled, packagingFee, rewar
           <div className="mt-3 grid grid-cols-2 gap-3" role="radiogroup" aria-label="Service type">
             {([
               { value: "dine_in", label: "Dine-in", icon: Utensils, help: "Eat at the kubo" },
-              { value: "takeout", label: "Takeout", icon: Bike, help: packagingFee > 0 ? `+${peso(packagingFee)} packaging per meal` : "Packed to go" },
+              { value: "takeout", label: "Takeout", icon: ShoppingBag, help: packagingFee > 0 ? `Pick up at the kubo · +${peso(packagingFee)} packaging per meal` : "Pick up at the kubo" },
             ] as const).map((o) => (
               <button
                 key={o.value}
