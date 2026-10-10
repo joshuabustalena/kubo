@@ -59,7 +59,7 @@ export default async function ContactPage() {
               <p className="font-semibold">Online ordering</p>
               <p className="text-ink-muted">
                 {s.online_ordering_enabled ? "Open — log in, add meals to your tray and pick up at the counter." : "Paused right now. Please order at the counter."}
-                {s.takeout_packaging_fee > 0 ? ` Takeout orders include a ${peso(s.takeout_packaging_fee)} packaging fee.` : ""}
+                {s.takeout_packaging_fee > 0 ? ` Takeout orders include a ${peso(s.takeout_packaging_fee)} packaging fee per meal.` : ""}
               </p>
             </div>
             <div>

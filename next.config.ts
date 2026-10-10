@@ -9,6 +9,10 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // Dev only: a fresh id on every `next dev` start adds ?dpl= to asset URLs and
+  // makes already-open tabs do a full reload, so browsers never keep running
+  // JavaScript from before a restart. Production uses the host's deployment id.
+  deploymentId: process.env.NODE_ENV === "development" ? `dev-${Date.now()}` : undefined,
   // Almost every page here is per-user (cart, orders, POS, admin), so the app
   // uses request-time rendering rather than Cache Components.
   images: {
@@ -28,6 +32,15 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        // PWA service worker: never cached, so updates reach installed apps right away
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
       {
         source: "/:path*",
         headers: [

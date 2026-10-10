@@ -11,6 +11,7 @@ import { useCart } from "@/lib/cart";
 import type { MenuProduct } from "@/lib/data";
 import { peso } from "@/lib/format";
 import { pointsForLine, type PointsRules } from "@/lib/points";
+import { isSoldOut, servingsLeft } from "@/lib/types";
 
 export function AddToCart({ product, rules }: { product: MenuProduct; rules: PointsRules }) {
   const cart = useCart();
@@ -43,7 +44,9 @@ export function AddToCart({ product, rules }: { product: MenuProduct; rules: Poi
     if (goToCart) router.push("/cart");
   };
 
-  if (!product.is_available) {
+  const left = servingsLeft(product);
+  const maxQty = Math.min(20, left ?? 20);
+  if (isSoldOut(product)) {
     return <Alert tone="warning" className="mt-6" title="Sold out for now">Check back later or try another kubo favourite.</Alert>;
   }
 
@@ -51,6 +54,7 @@ export function AddToCart({ product, rules }: { product: MenuProduct; rules: Poi
     <div className="mt-6 space-y-5">
       <div className="flex items-center gap-3">
         <span className="font-display text-3xl font-extrabold text-forest-700">{peso(product.price)}</span>
+        {left !== null ? <span className={`text-sm font-semibold ${left <= 5 ? "text-terracotta-600" : "text-ink-muted"}`}>{left} left today</span> : null}
         {points > 0 ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-3 py-1 text-sm font-bold text-gold-700">
             <Sparkles className="size-4" /> Earn {points} point{points > 1 ? "s" : ""}
@@ -68,11 +72,11 @@ export function AddToCart({ product, rules }: { product: MenuProduct; rules: Poi
                   <input
                     type="checkbox"
                     className="size-4.5 accent-forest-700"
-                    disabled={!a.is_available}
+                    disabled={isSoldOut(a)}
                     checked={addonIds.includes(a.id)}
                     onChange={(e) => setAddonIds((ids) => (e.target.checked ? [...ids, a.id] : ids.filter((x) => x !== a.id)))}
                   />
-                  <span className="font-medium">{a.name}{!a.is_available ? " (sold out)" : ""}</span>
+                  <span className="font-medium">{a.name}{isSoldOut(a) ? " (sold out)" : ""}</span>
                 </span>
                 <span className="text-sm font-semibold text-wood-600">+{peso(a.price)}</span>
               </label>
@@ -92,7 +96,7 @@ export function AddToCart({ product, rules }: { product: MenuProduct; rules: Poi
             <Minus className="size-4" />
           </button>
           <span className="w-10 text-center text-lg font-bold" aria-live="polite">{qty}</span>
-          <button type="button" className="grid size-11 place-items-center text-wood-700 disabled:opacity-40" onClick={() => setQty((q) => Math.min(20, q + 1))} disabled={qty >= 20} aria-label="Increase quantity">
+          <button type="button" className="grid size-11 place-items-center text-wood-700 disabled:opacity-40" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} disabled={qty >= maxQty} aria-label="Increase quantity">
             <Plus className="size-4" />
           </button>
         </div>

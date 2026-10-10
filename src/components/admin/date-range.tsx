@@ -38,9 +38,9 @@ export function DateRangeFilter({ from, to }: { from: string; to: string }) {
           </Button>
         ))}
       </div>
-      <form className="flex items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); go(f, t); }}>
-        <label className="text-xs font-semibold text-ink-muted">From<Input type="date" value={f} max={t} onChange={(e) => setF(e.target.value)} className="h-9 w-[9.5rem] text-sm" /></label>
-        <label className="text-xs font-semibold text-ink-muted">To<Input type="date" value={t} min={f} onChange={(e) => setT(e.target.value)} className="h-9 w-[9.5rem] text-sm" /></label>
+      <form className="flex w-full flex-wrap items-end gap-1.5 sm:w-auto" onSubmit={(e) => { e.preventDefault(); go(f, t); }}>
+        <label className="min-w-0 flex-1 text-xs font-semibold text-ink-muted sm:flex-none">From<Input type="date" value={f} max={t} onChange={(e) => setF(e.target.value)} className="h-9 w-full text-sm sm:w-[9.5rem]" /></label>
+        <label className="min-w-0 flex-1 text-xs font-semibold text-ink-muted sm:flex-none">To<Input type="date" value={t} min={f} onChange={(e) => setT(e.target.value)} className="h-9 w-full text-sm sm:w-[9.5rem]" /></label>
         <Button size="sm" type="submit" variant="wood">Apply</Button>
       </form>
     </div>

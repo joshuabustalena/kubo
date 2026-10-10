@@ -89,3 +89,12 @@ export const EXPENSE_LABEL: Record<string, string> = {
   transport: "Transport",
   other: "Other",
 };
+
+/** Money paid for stock: purchases received between the two Manila dates. */
+export async function getStockPurchases(from: string, to: string): Promise<number> {
+  const supabase = await createClient();
+  const start = new Date(`${from}T00:00:00+08:00`).toISOString();
+  const end = new Date(new Date(`${to}T00:00:00+08:00`).getTime() + 86400000).toISOString();
+  const { data } = await supabase.from("purchase_orders").select("total_cost").eq("status", "received").gte("received_at", start).lt("received_at", end);
+  return (data ?? []).reduce((s, p) => s + Number(p.total_cost), 0);
+}

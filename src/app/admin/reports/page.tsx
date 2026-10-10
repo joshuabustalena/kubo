@@ -1,23 +1,19 @@
-import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import { RankedBars } from "@/components/admin/charts";
 import { DateRangeFilter } from "@/components/admin/date-range";
 import { PageHeader } from "@/components/admin/page-header";
 import { Ledger, Stat } from "@/components/admin/stat";
-import { ButtonLink } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { PrintButton, ReportSection } from "@/components/admin/report-section";
+import { CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { dateRange } from "@/lib/admin";
-import { dateOnly, num, peso, percent, UNIT_LABEL } from "@/lib/format";
+import { getStoreSettings } from "@/lib/data";
+import { dateOnly, dateTime, num, peso, percent, UNIT_LABEL } from "@/lib/format";
 import { EXPENSE_LABEL, getDailySales, getProductSales, getSummary } from "@/lib/reports";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Reports" };
-
-function Csv({ report, from, to }: { report: string; from: string; to: string }) {
-  return <ButtonLink href={`/api/export/${report}?from=${from}&to=${to}`} variant="outline" size="sm"><Download /> CSV</ButtonLink>;
-}
 
 type Week = { label: string; orders: number; net: number; profit: number };
 
@@ -25,7 +21,8 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
   const sp = await props.searchParams;
   const { from, to } = dateRange(sp, 30);
   const supabase = await createClient();
-  const [sum, daily, products, ingredients, staff, loyalty] = await Promise.all([
+  const [settings, sum, daily, products, ingredients, staff, loyalty] = await Promise.all([
+    getStoreSettings(),
     getSummary(from, to),
     getDailySales(from, to),
     getProductSales(from, to),
@@ -52,9 +49,21 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
   const ing = (ingredients.data ?? []) as { item_name: string; unit: string; used: number; used_cost: number; purchased: number; purchased_cost: number; wasted: number; wasted_cost: number }[];
   const l = (loyalty.data ?? {}) as Record<string, number> & { game_rewards?: { game: string; rounds: number; points: number; coupons: number }[] };
 
+  const ingTotals = {
+    used: ing.reduce((s, i) => s + Number(i.used_cost), 0),
+    purchased: ing.reduce((s, i) => s + Number(i.purchased_cost), 0),
+    wasted: ing.reduce((s, i) => s + Number(i.wasted_cost), 0),
+  };
+  const staffRows = (staff.data ?? []) as { staff_id: string; staff_name: string; orders: number; sales: number; discounts: number; voids: number; void_amount: number; refunds: number; refund_amount: number }[];
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Reports" description={`${dateOnly(from)} – ${dateOnly(to)} · Asia/Manila days · sales dated by completion`} actions={<DateRangeFilter from={from} to={to} />} />
+      <p className="print-only text-sm text-ink-muted">{settings.store_name} · printed {dateTime(new Date())}</p>
+      <PageHeader
+        title="Reports"
+        description={`${dateOnly(from)} – ${dateOnly(to)} · Asia/Manila days · sales dated by completion`}
+        actions={<div className="no-print flex flex-wrap items-end gap-2"><DateRangeFilter from={from} to={to} /><PrintButton /></div>}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Net sales" value={peso(sum.net_sales)} hint={`${sum.orders} orders · avg ${peso(sum.average_order_value)}`} />
@@ -64,8 +73,7 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader title="Sales & profit statement" description="Estimated food gross profit vs. net operating profit" />
+        <ReportSection title="Sales & profit statement" description="Estimated food gross profit vs. net operating profit" summary={peso(sum.net_operating_profit)}>
           <CardBody>
             <Ledger rows={[
               { label: "Gross sales", value: peso(sum.gross_sales), hint: `incl. ${peso(sum.packaging_fees)} packaging fees` },
@@ -79,9 +87,8 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
             ]} />
             <p className="mt-3 text-xs text-ink-muted">Voids in range: {sum.voids_count} ({peso(sum.voids_amount)}). Cancelled orders: {sum.cancelled_orders}. Net operating profit is an estimate before tax and excludes costs you haven&apos;t recorded.</p>
           </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Payments" description="Verified payments on completed orders" />
+        </ReportSection>
+        <ReportSection title="Payments" description="Verified payments on completed orders" summary={peso(sum.cash_received + sum.digital_received)}>
           <CardBody className="space-y-4">
             {sum.payments_by_method.length ? <RankedBars valueLabel="Collected" data={sum.payments_by_method.map((p) => ({ label: p.method, value: p.amount, note: `${p.count} payments` }))} /> : <EmptyState title="No payments" />}
             <div className="grid grid-cols-2 gap-3">
@@ -89,25 +96,21 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
               <Stat label="Takeout" value={peso(sum.takeout_sales)} hint={`${sum.takeout_orders} orders`} />
             </div>
           </CardBody>
-        </Card>
+        </ReportSection>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         {[{ title: "Daily", rows: daily.map((d) => ({ label: dateOnly(d.day), orders: d.orders, net: d.net_sales, profit: d.gross_profit })) }, { title: "Weekly", rows: [...weeks.values()] }, { title: "Monthly", rows: [...months.values()] }].map((t) => (
-          <Card key={t.title}>
-            <CardHeader title={`${t.title} sales`} action={t.title === "Daily" ? <Csv report="daily" from={from} to={to} /> : undefined} />
-            <div className="max-h-96 overflow-auto">
-              <Table>
-                <thead><tr><Th>Period</Th><Th className="text-right">Orders</Th><Th className="text-right">Net sales</Th><Th className="text-right">Gross profit</Th></tr></thead>
-                <tbody>{t.rows.map((r) => <Tr key={r.label}><Td className="whitespace-nowrap">{r.label}</Td><Td className="text-right">{r.orders}</Td><Td className="text-right tabular-nums">{peso(r.net)}</Td><Td className="text-right tabular-nums">{peso(r.profit)}</Td></Tr>)}</tbody>
-              </Table>
-            </div>
-          </Card>
+          <ReportSection key={t.title} title={`${t.title} sales`} summary={`${t.rows.length} ${t.title === "Daily" ? "days" : t.title === "Weekly" ? "weeks" : "months"}`}>
+            <Table scrollHeight="24rem">
+              <thead><tr><Th>Period</Th><Th className="text-right">Orders</Th><Th className="text-right">Net sales</Th><Th className="text-right">Gross profit</Th></tr></thead>
+              <tbody>{t.rows.map((r) => <Tr key={r.label}><Td className="whitespace-nowrap">{r.label}</Td><Td className="text-right">{r.orders}</Td><Td className="text-right tabular-nums">{peso(r.net)}</Td><Td className="text-right tabular-nums">{peso(r.profit)}</Td></Tr>)}</tbody>
+            </Table>
+          </ReportSection>
         ))}
       </div>
 
-      <Card>
-        <CardHeader title="Sales by product" description="Quantity, revenue and estimated profit (net of refunds)" action={<Csv report="products" from={from} to={to} />} />
+      <ReportSection title="Sales by product" description="Quantity, revenue and estimated profit (net of refunds)" summary={`${products.length} items`}>
         {products.length === 0 ? <EmptyState title="No sales in this range" /> : (
           <Table>
             <thead><tr><Th>Product</Th><Th>Category</Th><Th className="text-right">Qty</Th><Th className="text-right">Revenue</Th><Th className="text-right">Est. cost</Th><Th className="text-right">Est. profit</Th><Th className="text-right">Margin</Th></tr></thead>
@@ -116,10 +119,9 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
             ))}</tbody>
           </Table>
         )}
-      </Card>
+      </ReportSection>
 
-      <Card>
-        <CardHeader title="Ingredient consumption, purchases & spoilage" action={<Csv report="ingredients" from={from} to={to} />} />
+      <ReportSection title="Ingredient consumption, purchases & spoilage" summary={ing.length ? `Bought ${peso(ingTotals.purchased)}` : undefined}>
         {ing.length === 0 ? <EmptyState title="No stock movements in this range" /> : (
           <Table>
             <thead><tr><Th>Ingredient</Th><Th className="text-right">Used</Th><Th className="text-right">Used cost</Th><Th className="text-right">Purchased</Th><Th className="text-right">Purchase cost</Th><Th className="text-right">Spoiled</Th><Th className="text-right">Spoilage cost</Th></tr></thead>
@@ -132,30 +134,30 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
                   <Td className="text-right tabular-nums">{num(i.wasted, 3)}</Td><Td className="text-right tabular-nums">{peso(i.wasted_cost)}</Td>
                 </Tr>
               ))}
-              <Tr>
-                <Td className="font-bold">Totals</Td><Td /><Td className="text-right font-bold tabular-nums">{peso(ing.reduce((s, i) => s + Number(i.used_cost), 0))}</Td><Td />
-                <Td className="text-right font-bold tabular-nums">{peso(ing.reduce((s, i) => s + Number(i.purchased_cost), 0))}</Td><Td />
-                <Td className="text-right font-bold tabular-nums">{peso(ing.reduce((s, i) => s + Number(i.wasted_cost), 0))}</Td>
-              </Tr>
             </tbody>
           </Table>
         )}
-      </Card>
+        {ing.length ? (
+          <dl className="grid grid-cols-3 gap-2 border-t border-bamboo-300/50 px-5 py-3 text-sm">
+            <div><dt className="text-xs font-bold uppercase text-ink-muted">Used</dt><dd className="font-bold tabular-nums">{peso(ingTotals.used)}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-ink-muted">Purchased</dt><dd className="font-bold tabular-nums">{peso(ingTotals.purchased)}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-ink-muted">Spoiled</dt><dd className="font-bold tabular-nums">{peso(ingTotals.wasted)}</dd></div>
+          </dl>
+        ) : null}
+      </ReportSection>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader title="Staff transactions" description="POS sales, discounts, voids and refunds by staff member" action={<Csv report="staff" from={from} to={to} />} />
-          {(staff.data ?? []).length === 0 ? <EmptyState title="No staff activity" /> : (
+        <ReportSection title="Staff transactions" description="POS sales, discounts, voids and refunds by staff member" summary={staffRows.length ? `${staffRows.length} staff` : undefined}>
+          {staffRows.length === 0 ? <EmptyState title="No staff activity" /> : (
             <Table>
               <thead><tr><Th>Staff</Th><Th className="text-right">Orders</Th><Th className="text-right">Sales</Th><Th className="text-right">Discounts</Th><Th className="text-right">Voids</Th><Th className="text-right">Refunds</Th></tr></thead>
-              <tbody>{(staff.data ?? []).map((s: { staff_id: string; staff_name: string; orders: number; sales: number; discounts: number; voids: number; void_amount: number; refunds: number; refund_amount: number }) => (
+              <tbody>{staffRows.map((s) => (
                 <Tr key={s.staff_id}><Td className="font-semibold">{s.staff_name}</Td><Td className="text-right">{s.orders}</Td><Td className="text-right tabular-nums">{peso(s.sales)}</Td><Td className="text-right tabular-nums">{peso(s.discounts)}</Td><Td className="text-right">{s.voids} · {peso(s.void_amount)}</Td><Td className="text-right">{s.refunds} · {peso(s.refund_amount)}</Td></Tr>
               ))}</tbody>
             </Table>
           )}
-        </Card>
-        <Card>
-          <CardHeader title="Loyalty & Play Zone" />
+        </ReportSection>
+        <ReportSection title="Loyalty & Play Zone" summary={`${num(l.points_earned, 0)} pts earned`}>
           <CardBody className="space-y-4">
             <Ledger rows={[
               { label: "Points earned from orders", value: num(l.points_earned, 0) },
@@ -171,11 +173,7 @@ export default async function ReportsPage(props: PageProps<"/admin/reports">) {
               <tbody>{(l.game_rewards ?? []).map((g) => <Tr key={g.game}><Td>{g.game}</Td><Td className="text-right">{g.rounds}</Td><Td className="text-right">{g.points}</Td><Td className="text-right">{g.coupons}</Td></Tr>)}</tbody>
             </Table>
           </CardBody>
-        </Card>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Csv report="orders" from={from} to={to} />
-        <ButtonLink href={`/api/export/expenses?from=${from}&to=${to}`} variant="outline" size="sm"><Download /> Expenses CSV</ButtonLink>
+        </ReportSection>
       </div>
     </div>
   );

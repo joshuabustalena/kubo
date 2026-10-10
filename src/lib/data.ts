@@ -15,7 +15,7 @@ export const getStoreSettings = cache(async (): Promise<StoreSettings> => {
   } as StoreSettings;
 });
 
-export type MenuProduct = Product & { addons: Pick<Product, "id" | "name" | "price" | "is_available" | "points_eligible">[] };
+export type MenuProduct = Product & { addons: Pick<Product, "id" | "name" | "price" | "is_available" | "points_eligible" | "track_stock" | "stock_quantity">[] };
 export type Menu = { categories: Category[]; products: MenuProduct[] };
 
 /** Public menu: active categories, non-archived products and their add-ons. */
@@ -40,7 +40,7 @@ export const getMenu = cache(async (): Promise<Menu> => {
         .filter((l) => l.product_id === p.id)
         .map((l) => byId.get(l.addon_product_id))
         .filter((a): a is Product => Boolean(a))
-        .map((a) => ({ id: a.id, name: a.name, price: a.price, is_available: a.is_available, points_eligible: a.points_eligible })),
+        .map((a) => ({ id: a.id, name: a.name, price: a.price, is_available: a.is_available, points_eligible: a.points_eligible, track_stock: a.track_stock, stock_quantity: a.stock_quantity })),
     }));
   return { categories, products };
 });

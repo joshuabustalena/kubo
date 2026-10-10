@@ -1,7 +1,7 @@
-import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import { DateRangeFilter } from "@/components/admin/date-range";
 import { PageHeader } from "@/components/admin/page-header";
+import { PrintButton } from "@/components/admin/report-section";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export default async function AuditPage(props: PageProps<"/admin/audit">) {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Audit log" description="Every void, refund, discount, payment check, stock change, price/setting edit and access change, with who did it." actions={<ButtonLink href={`/api/export/audit?from=${from}&to=${to}`} variant="outline" size="sm"><Download /> CSV</ButtonLink>} />
+      <PageHeader title="Audit log" description="Every void, refund, discount, payment check, stock change, price/setting edit and access change, with who did it." actions={<PrintButton />} />
       <DateRangeFilter from={from} to={to} />
       <div className="flex flex-wrap gap-2">
         {[["", "All"], ["money", "Money & orders"], ["stock", "Stock"], ["settings", "Menu & settings"], ["access", "Access"]].map(([k, l]) => (

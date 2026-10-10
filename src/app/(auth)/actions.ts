@@ -19,8 +19,15 @@ async function resolveLoginEmail(identifier: string): Promise<string | null> {
   const service = createServiceClient();
   const phone = normalizePhone(id);
   const query = service.from("profiles").select("email").limit(1);
-  const { data } = phone ? await query.eq("phone", phone).maybeSingle() : await query.eq("username", normalizeUsername(id)).maybeSingle();
-  return data?.email || null;
+  if (phone) {
+    const { data } = await query.eq("phone", phone).maybeSingle();
+    return data?.email || null;
+  }
+  const username = normalizeUsername(id);
+  const { data } = await query.eq("username", username).maybeSingle();
+  // Fallback: username accounts always use this address, even if the profile
+  // row is missing its username (e.g. created before the username migration)
+  return data?.email || (USERNAME_RULE.test(username) ? loginEmailFor(username) : null);
 }
 
 export async function login(_: AuthState, form: FormData): Promise<AuthState> {

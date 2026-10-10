@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Ticket } from "lucide-react";
 import Link from "next/link";
 import { ProductImage } from "@/components/brand/meal-art";
 import { Badge } from "@/components/ui/badge";
@@ -8,23 +8,27 @@ import { useToast } from "@/components/ui/toast";
 import { useCart } from "@/lib/cart";
 import type { MenuProduct } from "@/lib/data";
 import { peso } from "@/lib/format";
-import { pointsForPrice, type PointsRules } from "@/lib/points";
+import { tokensForPrice, type PointsRules } from "@/lib/points";
+import { isSoldOut, servingsLeft } from "@/lib/types";
 
 export function ProductCard({ product, rules, priority }: { product: MenuProduct; rules: PointsRules; priority?: boolean }) {
   const cart = useCart();
   const toast = useToast();
-  const points = product.points_eligible ? pointsForPrice(product.price, rules) : 0;
+  // Game tokens earned per meal (only meals earn them, like points)
+  const tokens = product.points_eligible ? tokensForPrice(product.price, rules) : 0;
+  const soldOut = isSoldOut(product);
+  const left = servingsLeft(product);
 
   return (
     <article className="paper group flex flex-col overflow-hidden transition-shadow hover:shadow-[var(--shadow-lift)]">
       <Link href={`/menu/${product.slug}`} className="relative block" aria-label={`${product.name} details`}>
         <ProductImage src={product.image_url} slug={product.slug} name={product.name} priority={priority} />
-        {!product.is_available ? (
+        {soldOut ? (
           <span className="absolute inset-0 grid place-items-center bg-wood-800/55 font-display text-xl font-bold text-cream-50">Sold out</span>
         ) : null}
-        {points > 0 ? (
-          <Badge tone="gold" className="absolute left-3 top-3 shadow-sm">
-            <Sparkles className="size-3" /> +{points} pt{points > 1 ? "s" : ""}
+        {tokens > 0 ? (
+          <Badge tone="gold" className="absolute left-3 top-3 shadow-sm" title="Game tokens for the Play Zone">
+            <Ticket className="size-3" /> +{tokens} token{tokens > 1 ? "s" : ""}
           </Badge>
         ) : null}
       </Link>
@@ -37,7 +41,9 @@ export function ProductCard({ product, rules, priority }: { product: MenuProduct
         </div>
         <p className="line-clamp-2 text-sm text-ink-muted">{product.description}</p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-          {product.addons.length > 0 ? (
+          {!soldOut && left !== null && left <= 5 ? (
+            <span className="text-sm font-bold text-terracotta-600">Only {left} left!</span>
+          ) : product.addons.length > 0 ? (
             <Link href={`/menu/${product.slug}`} className="text-sm font-semibold text-forest-700 hover:underline">
               Add-ons available
             </Link>
@@ -46,7 +52,7 @@ export function ProductCard({ product, rules, priority }: { product: MenuProduct
           )}
           <button
             type="button"
-            disabled={!product.is_available}
+            disabled={soldOut}
             onClick={() => {
               cart.add({
                 productId: product.id,

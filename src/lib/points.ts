@@ -8,7 +8,14 @@ export type PointsRules = {
   points_at_or_below: number;
   points_above: number;
   points_on_addons: boolean;
+  game_tokens_enabled?: boolean;
 };
+
+/** Display-only mirror of public.tokens_for_price(): Play Zone tokens per meal, same price tiers as points. */
+export function tokensForPrice(price: number, rules: PointsRules): number {
+  if (!rules.game_tokens_enabled) return 0;
+  return price <= Number(rules.points_price_threshold) ? rules.points_at_or_below : rules.points_above;
+}
 
 export function pointsForPrice(price: number, rules: PointsRules): number {
   if (!rules.points_enabled) return 0;

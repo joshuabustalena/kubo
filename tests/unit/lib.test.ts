@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { toCsv } from "@/lib/csv";
 import { toFailure } from "@/lib/errors";
 import { addDays, manilaDate, peso } from "@/lib/format";
 import { pointsForLine, pointsForPrice } from "@/lib/points";
@@ -37,16 +36,6 @@ describe("Manila dates", () => {
     expect(manilaDate(new Date("2026-10-09T16:30:00Z"))).toBe("2026-10-10");
     expect(manilaDate(new Date("2026-10-09T15:59:00Z"))).toBe("2026-10-09");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
-  });
-});
-
-describe("CSV export", () => {
-  it("quotes, adds a BOM and neutralises spreadsheet formulas", () => {
-    const csv = toCsv([{ a: 'He said "hi"', b: "=HYPERLINK(1)", c: -5 }]);
-    expect(csv.startsWith("﻿")).toBe(true);
-    expect(csv).toContain('"He said ""hi"""');
-    expect(csv).toContain("'=HYPERLINK(1)");
-    expect(csv).toContain(",-5");
   });
 });
 

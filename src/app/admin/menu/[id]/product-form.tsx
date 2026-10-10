@@ -1,6 +1,7 @@
 "use client";
 
 import { ImagePlus, Loader2, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useActionState, useState } from "react";
 import { ProductImage } from "@/components/brand/meal-art";
 import { Button } from "@/components/ui/button";
@@ -29,21 +30,22 @@ export function ProductForm({
   const [name, setName] = useState(product?.name ?? "");
   const [slug, setSlug] = useState(product?.slug ?? "");
   const [image, setImage] = useState<string | null>(product?.image_url ?? null);
+  const [icon, setIcon] = useState<string | null>(product?.pos_icon_url ?? null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const upload = async (file: File) => {
+  const upload = async (file: File, folder: "products" | "pos-icons", done: (url: string) => void) => {
     setUploadError(null);
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return setUploadError("Use a JPG, PNG or WebP image.");
     if (file.size > 3 * 1024 * 1024) return setUploadError("Images must be 3 MB or smaller.");
     setUploading(true);
     const supabase = createClient();
     const ext = file.type.split("/")[1].replace("jpeg", "jpg");
-    const path = `products/${slugify(name || "item")}-${Date.now()}.${ext}`;
+    const path = `${folder}/${slugify(name || "item")}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("menu-images").upload(path, file, { cacheControl: "31536000", upsert: false });
     setUploading(false);
     if (error) return setUploadError(error.message);
-    setImage(supabase.storage.from("menu-images").getPublicUrl(path).data.publicUrl);
+    done(supabase.storage.from("menu-images").getPublicUrl(path).data.publicUrl);
   };
 
   return (
@@ -54,6 +56,7 @@ export function ProductForm({
           {state.saved ? <Alert tone="success">Saved.</Alert> : null}
           <input type="hidden" name="id" value={product?.id ?? ""} />
           <input type="hidden" name="image_url" value={image ?? ""} />
+          {icon !== (product?.pos_icon_url ?? null) ? <input type="hidden" name="pos_icon_url" value={icon ?? ""} /> : null}
 
           <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
             <div className="space-y-2">
@@ -62,11 +65,24 @@ export function ProductForm({
               </div>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-bamboo-500 py-2 text-sm font-semibold text-wood-700 hover:bg-cream-200">
                 {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />} {image ? "Replace photo" : "Upload photo"}
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], "products", setImage)} />
               </label>
               {image ? <Button size="sm" variant="ghost" className="w-full" onClick={() => setImage(null)}><Trash2 /> Use illustration</Button> : null}
               {uploadError ? <p className="text-xs text-terracotta-600">{uploadError}</p> : null}
               <p className="text-xs text-ink-muted">Tip: shoot the meal on its black tray with greaseproof paper, from above, in daylight.</p>
+              <div className="flex items-center gap-3 rounded-xl bg-cream-200/60 p-2">
+                <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-cream-50 ring-1 ring-bamboo-300">
+                  {icon ? <Image src={icon} alt="" width={112} height={112} className="size-12 object-contain" /> : <span className="text-[0.65rem] text-ink-muted">No icon</span>}
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-xs font-bold text-wood-700">POS icon</p>
+                  <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-forest-700 hover:underline">
+                    <ImagePlus className="size-3.5" /> {icon ? "Replace" : "Upload"} (transparent PNG/WebP)
+                    <input type="file" accept="image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], "pos-icons", setIcon)} />
+                  </label>
+                  {icon ? <button type="button" className="text-xs text-terracotta-600 hover:underline" onClick={() => setIcon(null)}>Remove icon</button> : null}
+                </div>
+              </div>
             </div>
             <div className="space-y-4">
               <Field label="Name" htmlFor="name">
@@ -98,6 +114,16 @@ export function ProductForm({
             <Checkbox name="points_eligible" label="Earns loyalty points (meals)" defaultChecked={product?.points_eligible ?? true} />
             <Checkbox name="is_addon" label="Can be added to meals as an add-on" defaultChecked={product?.is_addon ?? false} />
           </div>
+          <fieldset className="rounded-xl border border-bamboo-300/60 p-4">
+            <legend className="px-1 text-sm font-bold text-wood-700">Servings stock</legend>
+            <div className="flex flex-wrap items-end gap-4">
+              <Checkbox name="track_stock" label="Count servings (goes down with every order; Sold out at 0)" defaultChecked={product?.track_stock ?? false} />
+              <Field label="Servings left" htmlFor="stock_quantity" className="w-40">
+                <Input id="stock_quantity" name="stock_quantity" type="number" min={0} step={1} defaultValue={product?.stock_quantity ?? 0} />
+              </Field>
+            </div>
+            <p className="mt-2 text-xs text-ink-muted">Staff can also update this from the POS (box icon on each item).</p>
+          </fieldset>
           <Field label="Sort order" htmlFor="sort_order" className="max-w-40">
             <Input id="sort_order" name="sort_order" type="number" min={0} max={9999} defaultValue={product?.sort_order ?? 0} />
           </Field>

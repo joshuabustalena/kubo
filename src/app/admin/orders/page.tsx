@@ -1,8 +1,9 @@
-import { ClipboardList, Download } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DateRangeFilter } from "@/components/admin/date-range";
 import { PageHeader } from "@/components/admin/page-header";
+import { PrintButton } from "@/components/admin/report-section";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -38,7 +39,7 @@ export default async function AdminOrdersPage(props: PageProps<"/admin/orders">)
       <PageHeader
         title="Orders & refunds"
         description="Every online and walk-in order. Open one to update status, verify payment, void or refund."
-        actions={<ButtonLink href={`/api/export/orders?from=${from}&to=${to}`} variant="outline" size="sm"><Download /> CSV</ButtonLink>}
+        actions={<PrintButton />}
       />
       <DateRangeFilter from={from} to={to} />
       <div className="flex flex-wrap items-center gap-2">

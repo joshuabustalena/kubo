@@ -51,7 +51,7 @@ export function SettingsForm({ settings: s }: { settings: StoreSettings }) {
         <CardHeader title="Ordering" />
         <CardBody className="space-y-3">
           <Checkbox name="online_ordering_enabled" label="Accept online orders" defaultChecked={s.online_ordering_enabled} />
-          <Field label="Takeout packaging fee per order (₱)" htmlFor="pkg" hint="Charged to customers on takeout. Packaging cost itself is tracked in recipes." className="max-w-xs">
+          <Field label="Takeout packaging fee per meal (₱)" htmlFor="pkg" hint="Charged on takeout for every meal (e.g. ₱5 × 3 meals = ₱15). Drinks and add-ons are not counted. Packaging cost itself is tracked in recipes." className="max-w-xs">
             <Input id="pkg" name="takeout_packaging_fee" type="number" min={0} step="0.01" defaultValue={s.takeout_packaging_fee} />
           </Field>
         </CardBody>

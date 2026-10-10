@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Alert } from "@/components/ui/feedback";
+import { Table } from "@/components/ui/table";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { peso } from "@/lib/format";
 import type { StockUnit } from "@/lib/types";
@@ -44,8 +45,7 @@ export function PurchaseForm({ today, items, suppliers }: { today: string; items
           </Field>
           <Field label="Date" htmlFor="po-date"><Input id="po-date" type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} /></Field>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+        <Table className="md:min-w-[720px] [&_td]:py-2 md:[&_td]:pr-2">
             <thead><tr className="text-left text-xs font-bold uppercase text-wood-600"><th className="pb-2">Item</th><th className="pb-2">Quantity</th><th className="pb-2">Unit</th><th className="pb-2">Cost per unit (₱)</th><th className="pb-2">Expiry</th><th className="pb-2 text-right">Line total</th><th /></tr></thead>
             <tbody>
               {lines.map((l) => {
@@ -75,8 +75,7 @@ export function PurchaseForm({ today, items, suppliers }: { today: string; items
                 );
               })}
             </tbody>
-          </table>
-        </div>
+        </Table>
         <Button variant="outline" size="sm" onClick={() => setLines((ls) => [...ls, { key: crypto.randomUUID(), item_id: "", quantity: "", unit: "kg", unit_cost: "", expiration_date: "" }])}><Plus /> Add item</Button>
         <Field label="Notes (invoice no., remarks)" htmlFor="po-notes"><Textarea id="po-notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} className="min-h-14" /></Field>
         <Checkbox label="Goods already received — add to stock now" checked={receiveNow} onChange={(e) => setReceiveNow(e.target.checked)} />

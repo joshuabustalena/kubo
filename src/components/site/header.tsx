@@ -1,9 +1,10 @@
-import { ClipboardList, LayoutDashboard, LogIn, Menu as MenuIcon, Store, UserRound } from "lucide-react";
+import { LayoutDashboard, LogIn, Store, UserRound } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
 import { CartButton } from "./cart-button";
+import { SiteMobileMenu } from "./mobile-menu";
 
 const NAV = [
   { href: "/menu", label: "Menu" },
@@ -18,7 +19,7 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-bamboo-400/40 bg-cream-50/95 backdrop-blur no-print">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
-        <Logo />
+        <Logo compact />
         <nav aria-label="Main" className="ml-6 hidden items-center gap-1 md:flex">
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className="rounded-lg px-3 py-2 text-sm font-semibold text-wood-700 hover:bg-cream-200">
@@ -40,34 +41,13 @@ export async function SiteHeader() {
               <span className="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold text-gold-700">{user.points_balance} pts</span>
             </ButtonLink>
           ) : (
-            <ButtonLink href="/login" variant="ghost" size="sm">
+            <ButtonLink href="/login" variant="ghost" size="sm" aria-label="Log in">
               <LogIn />
-              <span>Log in</span>
+              <span className="hidden sm:inline">Log in</span>
             </ButtonLink>
           )}
           <CartButton />
-          <details className="group relative md:hidden">
-            <summary className="grid size-10 cursor-pointer list-none place-items-center rounded-xl text-wood-700 hover:bg-cream-200 [&::-webkit-details-marker]:hidden" aria-label="Open menu">
-              <MenuIcon className="size-5" />
-            </summary>
-            <div className="paper absolute right-0 top-12 w-56 p-2">
-              {NAV.map((n) => (
-                <Link key={n.href} href={n.href} className="block rounded-lg px-3 py-2.5 font-semibold text-wood-700 hover:bg-cream-200">
-                  {n.label}
-                </Link>
-              ))}
-              {user ? (
-                <Link href="/account/orders" className="flex items-center gap-2 rounded-lg px-3 py-2.5 font-semibold text-wood-700 hover:bg-cream-200">
-                  <ClipboardList className="size-4" /> My orders
-                </Link>
-              ) : null}
-              {user && user.role !== "customer" ? (
-                <Link href={user.role === "admin" ? "/admin" : "/pos"} className="block rounded-lg px-3 py-2.5 font-semibold text-forest-700 hover:bg-cream-200">
-                  {user.role === "admin" ? "Admin dashboard" : "Staff POS"}
-                </Link>
-              ) : null}
-            </div>
-          </details>
+          <SiteMobileMenu user={user ? { name: user.full_name.split(" ")[0] || user.username || "Account", points: user.points_balance, role: user.role } : null} />
         </div>
       </div>
       <div className="bamboo-pole !h-[5px] !rounded-none" role="presentation" />

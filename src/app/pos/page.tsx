@@ -3,6 +3,7 @@ import { getCurrentUser, hasPermission } from "@/lib/auth";
 import { getPaymentMethods, getStoreSettings } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product } from "@/lib/types";
+import { AutoRefresh } from "@/components/orders/auto-refresh";
 import { Register } from "./register";
 
 export const metadata: Metadata = { title: "Register" };
@@ -19,7 +20,9 @@ export default async function PosPage() {
   ]);
   const products = ((prods.data ?? []) as Product[]).map((p) => ({ ...p, price: Number(p.price) }));
   return (
-    <Register
+    <>
+      <AutoRefresh seconds={15} />
+      <Register
       categories={(cats.data ?? []) as Category[]}
       products={products}
       addonLinks={(links.data ?? []).map((l) => [l.product_id, l.addon_product_id] as [string, string])}
@@ -27,6 +30,7 @@ export default async function PosPage() {
       packagingFee={settings.takeout_packaging_fee}
       maxDiscount={settings.max_staff_discount_percent}
       canDiscount={hasPermission(user, "apply_discount")}
-    />
+      />
+    </>
   );
 }

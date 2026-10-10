@@ -16,6 +16,7 @@ const productSchema = z.object({
   description: z.string().max(500),
   price: z.number().min(0, "Price can't be negative.").max(100000),
   image_url: z.string().url().nullable(),
+  pos_icon_url: z.string().url().nullable().optional(),
   is_available: z.boolean(),
   is_featured: z.boolean(),
   is_addon: z.boolean(),
@@ -42,6 +43,8 @@ export async function saveProduct(_: FormState, form: FormData): Promise<FormSta
     description: text(form, "description"),
     price: Number(text(form, "price")),
     image_url: text(form, "image_url") || null,
+    // Only sent when the icon was changed in the form
+    pos_icon_url: form.has("pos_icon_url") ? text(form, "pos_icon_url") || null : undefined,
     is_available: bool(form, "is_available"),
     is_featured: bool(form, "is_featured"),
     is_addon: bool(form, "is_addon"),
@@ -68,6 +71,14 @@ export async function saveProduct(_: FormState, form: FormData): Promise<FormSta
   if (links.length) {
     const { error } = await supabase.from("product_addons").insert(links);
     if (error) return { error: toFailure(error).error };
+  }
+  // Servings stock goes through the audited function
+  const track = bool(form, "track_stock");
+  const qty = Math.max(0, Math.floor(Number(text(form, "stock_quantity") || 0)));
+  const { data: cur } = await supabase.from("products").select("track_stock, stock_quantity").eq("id", productId).single();
+  if (cur && (cur.track_stock !== track || cur.stock_quantity !== qty)) {
+    const { error: stockErr } = await supabase.rpc("set_product_stock", { p_product_id: productId, p_track: track, p_quantity: qty });
+    if (stockErr) return { error: toFailure(stockErr).error };
   }
   // Price changes affect margins: record a cost snapshot
   await supabase.rpc("admin_snapshot_costs");

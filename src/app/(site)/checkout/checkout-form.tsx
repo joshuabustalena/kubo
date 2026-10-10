@@ -110,7 +110,7 @@ export function CheckoutForm({ user, methods, onlineEnabled, packagingFee, rewar
           <div className="mt-3 grid grid-cols-2 gap-3" role="radiogroup" aria-label="Service type">
             {([
               { value: "dine_in", label: "Dine-in", icon: Utensils, help: "Eat at the kubo" },
-              { value: "takeout", label: "Takeout", icon: Bike, help: packagingFee > 0 ? `+${peso(packagingFee)} packaging` : "Packed to go" },
+              { value: "takeout", label: "Takeout", icon: Bike, help: packagingFee > 0 ? `+${peso(packagingFee)} packaging per meal` : "Packed to go" },
             ] as const).map((o) => (
               <button
                 key={o.value}

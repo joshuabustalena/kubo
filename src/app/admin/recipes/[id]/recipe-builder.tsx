@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Alert } from "@/components/ui/feedback";
+import { Table } from "@/components/ui/table";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { useToast } from "@/components/ui/toast";
 import { peso, percent } from "@/lib/format";
@@ -103,8 +104,7 @@ export function RecipeBuilder({
           <Field label="Batch yield (servings)" htmlFor="r-yield" hint="Quantities below are for the whole batch."><Input id="r-yield" type="number" min={0.001} step="any" value={yieldServings} onChange={(e) => setYield(e.target.value)} /></Field>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+        <Table className="md:min-w-[760px] [&_td]:py-2 md:[&_td]:pr-2">
             <thead>
               <tr className="text-left text-xs font-bold uppercase text-wood-600">
                 <th className="pb-2">Ingredient / sub-recipe</th><th className="pb-2">Qty</th><th className="pb-2">Unit</th><th className="pb-2">Cost type</th><th className="pb-2">Used for</th><th className="pb-2 text-right">Dine-in cost</th><th />
@@ -159,8 +159,7 @@ export function RecipeBuilder({
                 );
               })}
             </tbody>
-          </table>
-        </div>
+        </Table>
         <Button variant="outline" size="sm" onClick={() => setLines((ls) => [...ls, { key: crypto.randomUUID(), inventory_item_id: null, sub_recipe_id: null, quantity: "1", unit: null, cost_type: "ingredient", applies_to: "all" }])}>
           <Plus /> Add line
         </Button>

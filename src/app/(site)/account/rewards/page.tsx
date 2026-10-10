@@ -104,7 +104,7 @@ export default async function RewardsPage() {
           {(ledger.data ?? []).length === 0 ? (
             <EmptyState icon={<History />} title="No points yet">Complete an order to start earning.</EmptyState>
           ) : (
-            <Table>
+            <Table scrollHeight="580px">
               <thead><tr><Th>Date</Th><Th>Details</Th><Th className="text-right">Points</Th></tr></thead>
               <tbody>
                 {(ledger.data ?? []).map((l) => (
@@ -123,7 +123,7 @@ export default async function RewardsPage() {
           {past.length === 0 ? (
             <EmptyState icon={<Ticket />} title="Nothing redeemed yet" />
           ) : (
-            <Table>
+            <Table scrollHeight="580px">
               <thead><tr><Th>Reward</Th><Th>Code</Th><Th>Status</Th></tr></thead>
               <tbody>
                 {past.map((c) => (

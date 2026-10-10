@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { STAFF_PERMISSIONS } from "@/lib/types";
 import { PinForm } from "./pin-form";
 
-export const metadata: Metadata = { title: "My PIN" };
+export const metadata: Metadata = { title: "My access" };
 
 export default async function PosMePage() {
   const user = (await getCurrentUser())!;
@@ -26,7 +26,7 @@ export default async function PosMePage() {
         <CardHeader title={user.full_name || user.email} description={user.role === "admin" ? "Admin" : "Staff"} />
         <CardBody className="flex flex-wrap gap-1.5">
           {user.role === "admin" ? <Badge tone="forest">All permissions</Badge> : null}
-          {user.role === "staff" && user.permissions.length === 0 ? <span className="text-sm text-ink-muted">Standard cashier access. Discounts, voids and refunds need a manager PIN.</span> : null}
+          {user.role === "staff" && user.permissions.length === 0 ? <span className="text-sm text-ink-muted">Standard cashier access. You don’t need a PIN — for a discount, void or refund the POS will ask your manager to type theirs.</span> : null}
           {user.role === "staff" ? STAFF_PERMISSIONS.filter((p) => user.permissions.includes(p.value)).map((p) => <Badge key={p.value} tone="green">{p.label}</Badge>) : null}
         </CardBody>
       </Card>

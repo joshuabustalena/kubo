@@ -9,7 +9,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { dateRange } from "@/lib/admin";
 import { dateOnly, manilaToday, num, peso, percent, UNIT_LABEL } from "@/lib/format";
-import { EXPENSE_LABEL, getDailySales, getProductSales, getSummary, type Summary } from "@/lib/reports";
+import { EXPENSE_LABEL, getDailySales, getProductSales, getStockPurchases, getSummary, type Summary } from "@/lib/reports";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminDashboard(props: PageProps<"/admin">) {
@@ -17,7 +17,7 @@ export default async function AdminDashboard(props: PageProps<"/admin">) {
   const { from, to } = dateRange(sp, 30);
   const today = manilaToday();
   const supabase = await createClient();
-  const [todaySum, sum, daily, products, inv, pendingPay, demo] = await Promise.all([
+  const [todaySum, sum, daily, products, inv, pendingPay, demo, todayStock, rangeStock] = await Promise.all([
     getSummary(today, today),
     getSummary(from, to),
     getDailySales(from, to),
@@ -25,7 +25,13 @@ export default async function AdminDashboard(props: PageProps<"/admin">) {
     supabase.rpc("inventory_overview"),
     supabase.from("payments").select("id, amount, reference_no, order_id, orders(order_number)").eq("status", "pending").order("created_at"),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("is_demo", true),
+    getStockPurchases(today, today),
+    getStockPurchases(from, to),
   ]);
+  // Money that went out = stock bought + recorded expenses
+  const todaySpent = todayStock + todaySum.expenses;
+  const todayIn = todaySum.cash_received + todaySum.digital_received;
+  const rangeSpent = rangeStock + sum.expenses;
   const overview = inv.data as { stock_value: number; low_stock: { id: string; name: string; unit: string; current_stock: number; min_stock: number }[]; expiring: { id: string; name: string; expiration_date: string }[] } | null;
   const top = products.slice(0, 8);
 
@@ -49,19 +55,29 @@ export default async function AdminDashboard(props: PageProps<"/admin">) {
 
       <section aria-labelledby="today">
         <h2 id="today" className="mb-2 font-display text-xl font-bold text-wood-800">Today</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Stat label="Net sales" value={peso(todaySum.net_sales)} hint={`${todaySum.orders} completed orders`} />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="Sales today" value={peso(todaySum.net_sales)} hint={`${todaySum.orders} completed orders`} />
+          <Stat
+            label="Money spent today"
+            value={peso(todaySpent)}
+            hint={<>Stock bought {peso(todayStock)} · Expenses {peso(todaySum.expenses)}<br /><Link href="/admin/expenses" className="underline">Add expense</Link> · <Link href="/admin/purchases/new" className="underline">Record stock</Link></>}
+          />
+          <Stat label="Est. profit today" value={peso(todaySum.net_operating_profit)} tone={todaySum.net_operating_profit < 0 ? "bad" : undefined} hint="Sales − food cost of what was sold − expenses" />
+          <Stat label="Money in − money out" value={peso(todayIn - todaySpent)} tone={todayIn - todaySpent < 0 ? "bad" : undefined} hint={`In ${peso(todayIn)} (cash ${peso(todaySum.cash_received)}, digital ${peso(todaySum.digital_received)})`} />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Avg. order" value={peso(todaySum.average_order_value)} />
-          <Stat label="Cash received" value={peso(todaySum.cash_received)} hint={`Digital ${peso(todaySum.digital_received)}`} />
           <Stat label="Est. gross profit" value={peso(todaySum.gross_profit)} hint={`${percent(todaySum.gross_margin)} margin`} />
+          <Stat label="Discounts & refunds" value={peso(todaySum.discounts + todaySum.refunds)} />
           <Stat label="Open orders" value={todaySum.open_orders} hint={<Link href="/pos/orders" className="underline">Order queue</Link>} />
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Selected range">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Selected range">
         <Stat label="Orders" value={num(sum.orders, 0)} hint={`${sum.online_orders} online · ${sum.pos_orders} walk-in`} />
         <Stat label="Net sales" value={peso(sum.net_sales)} hint={`Gross ${peso(sum.gross_sales)}`} />
         <Stat label="Average order value" value={peso(sum.average_order_value)} />
+        <Stat label="Money spent" value={peso(rangeSpent)} hint={`Stock ${peso(rangeStock)} · Expenses ${peso(sum.expenses)}`} />
         <Stat label="Est. net operating profit" value={peso(sum.net_operating_profit)} tone={sum.net_operating_profit < 0 ? "bad" : undefined} hint="After recorded expenses" />
       </section>
 

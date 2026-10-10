@@ -1,9 +1,9 @@
-import { Download, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/admin/page-header";
+import { PrintButton } from "@/components/admin/report-section";
 import { Stat } from "@/components/admin/stat";
-import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
@@ -29,7 +29,7 @@ export default async function CustomersPage(props: PageProps<"/admin/customers">
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Customers" description="Accounts, points balances and order history." actions={<ButtonLink href="/api/export/customers" variant="outline" size="sm"><Download /> CSV</ButtonLink>} />
+      <PageHeader title="Customers" description="Accounts, points balances and order history." actions={<PrintButton />} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat label="Customer accounts" value={count ?? 0} />
         <Stat label="Points outstanding (shown)" value={totalPoints} />

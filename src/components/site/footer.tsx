@@ -1,6 +1,7 @@
 import { Clock, Globe, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
+import { InstallAppButton } from "@/components/pwa/install-app";
 import { getStoreSettings } from "@/lib/data";
 
 export async function SiteFooter() {
@@ -12,6 +13,7 @@ export async function SiteFooter() {
         <div className="space-y-3">
           <Logo light />
           <p className="text-sm text-bamboo-200">{s.tagline}</p>
+          <InstallAppButton label="Install the app" className="rounded-xl bg-gold-400 px-4 py-2.5 text-sm font-bold text-wood-800 hover:bg-gold-300 [&_svg]:size-4" />
         </div>
         <div className="space-y-2 text-sm">
           <h2 className="font-display text-lg font-bold text-gold-300">Visit the kubo</h2>

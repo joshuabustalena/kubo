@@ -1,9 +1,10 @@
 "use client";
 
-import { Ban, Check, Loader2, Minus, Plus, Printer, Search, Trash2, UserRound, X } from "lucide-react";
+import { Check, Loader2, Minus, Package, Plus, Printer, Search, Trash2, UserRound, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
 import { mealKind } from "@/components/brand/meal-art";
 import { useOverride } from "@/components/pos/override";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,9 @@ import { Alert } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Select } from "@/components/ui/form";
 import { useToast } from "@/components/ui/toast";
 import { peso } from "@/lib/format";
-import type { Category, PaymentMethod, Product, ServiceType } from "@/lib/types";
+import { isSoldOut, servingsLeft, type Category, type PaymentMethod, type Product, type ServiceType } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { createPosSale, lookupRedemption, quotePos, searchCustomers, setAvailability, type PosQuote, type RedemptionLookup } from "./actions";
+import { createPosSale, lookupRedemption, quotePos, searchCustomers, setAvailability, setStock, type PosQuote, type RedemptionLookup } from "./actions";
 
 type Line = { key: string; product: Product; quantity: number; addons: Product[]; notes: string };
 type Customer = { id: string; full_name: string; username: string | null; phone?: string; points_balance: number };
@@ -66,6 +67,7 @@ export function Register(props: {
   const addonsFor = (id: string) => addonLinks.filter(([p]) => p === id).map(([, a]) => byId.get(a)).filter((p): p is Product => !!p);
   const selectedMethod = methods.find((m) => m.code === method);
 
+  const menuCount = products.filter((p) => categories.some((c) => c.id === p.category_id)).length;
   const visible = products.filter((p) => {
     const cat = categories.find((c) => c.id === p.category_id);
     if (!cat) return false;
@@ -102,16 +104,27 @@ export function Register(props: {
     saleKey.current = crypto.randomUUID();
   }, [items, service, method, promo, appliedReward, discount, customer, tendered, reference, completeNow]);
 
+  // Packaging preview until the server quote arrives: per meal, add-on categories (drinks, extras) excluded
+  const addonCats = new Set(categories.filter((c) => c.is_addon_category).map((c) => c.id));
+  const localPackaging = service === "takeout" ? props.packagingFee * lines.reduce((s, l) => s + (addonCats.has(l.product.category_id) ? 0 : l.quantity), 0) : 0;
   const localSubtotal = lines.reduce((s, l) => s + (l.product.price + l.addons.reduce((a, x) => a + x.price, 0)) * l.quantity, 0);
-  const base = quote ?? { subtotal: localSubtotal, packaging_fee: service === "takeout" ? props.packagingFee : 0, discount_total: 0, total: localSubtotal + (service === "takeout" ? props.packagingFee : 0), discount_reason: "", points: 0 };
+  const base = quote ?? { subtotal: localSubtotal, packaging_fee: localPackaging, discount_total: 0, total: localSubtotal + localPackaging, discount_reason: "", points: 0 };
   const manualValue = Number(discount.value) || 0;
   const manualAmount = manualValue > 0 ? Math.min(base.subtotal - base.discount_total, discount.type === "percent" ? Math.round(base.subtotal * Math.min(manualValue, 100)) / 100 : manualValue) : 0;
   const total = Math.max(0, Math.round((base.total - manualAmount) * 100) / 100);
   const cash = Number(tendered) || 0;
   const change = selectedMethod?.is_cash ? cash - total : 0;
 
+  // Servings already on this ticket for a product (meal lines + add-ons)
+  const inTicket = (id: string) => lines.reduce((s, l) => s + (l.product.id === id ? l.quantity : 0) + (l.addons.some((a) => a.id === id) ? l.quantity : 0), 0);
+
   const addProduct = (p: Product) => {
-    if (!p.is_available) return;
+    if (isSoldOut(p)) return;
+    const left = servingsLeft(p);
+    if (left !== null && inTicket(p.id) >= left) {
+      toast.error(`Only ${left} ${p.name} left.`);
+      return;
+    }
     setLines((ls) => {
       const existing = ls.find((l) => l.product.id === p.id && l.addons.length === 0 && !l.notes);
       if (existing) return ls.map((l) => (l === existing ? { ...l, quantity: Math.min(20, l.quantity + 1) } : l));
@@ -171,13 +184,7 @@ export function Register(props: {
     });
   };
 
-  const toggleAvailability = async (p: Product) => {
-    const res = await setAvailability(p.id, !p.is_available);
-    if (res.ok) {
-      toast.success(`${p.name} marked ${p.is_available ? "sold out" : "available"}.`);
-      router.refresh();
-    } else toast.error(res.error);
-  };
+  const [stockFor, setStockFor] = useState<Product | null>(null);
 
   const editingLine = lines.find((l) => l.key === editing);
   const tenderReady = !selectedMethod?.is_cash || cash >= total;
@@ -186,16 +193,16 @@ export function Register(props: {
   const canCharge = lines.length > 0 && !!method && !quoteError && tenderReady && refReady && discountReady && !submitting;
 
   return (
-    <div className="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-[1fr_420px]">
+    <div className="grid min-h-[calc(100dvh-3.5rem)] lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] 2xl:grid-cols-[1fr_420px] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
       {overrideDialog}
       {/* Product picker */}
-      <section className="flex min-w-0 flex-col border-r border-bamboo-300/50">
-        <div className="sticky top-14 z-20 space-y-2 border-b border-bamboo-300/50 bg-cream-100 p-3">
+      <section className="flex min-w-0 flex-col border-r border-bamboo-300/50 lg:min-h-0">
+        <div className="sticky top-14 z-20 space-y-2 border-b lg:static border-bamboo-300/50 bg-cream-100 p-3">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products" className="pl-9" aria-label="Search products" />
           </label>
-          <div className="scrollbar-none flex gap-1.5 overflow-x-auto">
+          <div className="scrollbar-none flex gap-1.5 overflow-x-auto lg:flex-wrap">
             {[{ id: "all", name: "All" }, ...categories].map((c) => (
               <button
                 key={c.id}
@@ -208,31 +215,48 @@ export function Register(props: {
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 xl:grid-cols-4">
+        <div
+          className="grid content-start grid-cols-2 gap-2 p-3 sm:grid-cols-3 xl:grid-cols-4 lg:min-h-0 lg:flex-1 lg:auto-rows-[minmax(min-content,1fr)] lg:content-stretch lg:overflow-y-auto lg:[grid-template-rows:repeat(var(--rows-lg),minmax(min-content,1fr))] xl:[grid-template-rows:repeat(var(--rows-xl),minmax(min-content,1fr))]"
+          // Same number of rows as the full menu (3 columns at lg, 4 at xl), so a filtered
+          // list keeps normal-size tiles instead of stretching them to fill the screen
+          style={{ "--rows-lg": Math.max(1, Math.ceil(menuCount / 3)), "--rows-xl": Math.max(1, Math.ceil(menuCount / 4)) } as CSSProperties}
+        >
           {visible.map((p) => (
             <div key={p.id} className="relative">
               <button
                 type="button"
                 onClick={() => addProduct(p)}
-                disabled={!p.is_available}
+                disabled={isSoldOut(p)}
                 className={cn(
-                  "flex h-28 w-full flex-col justify-between rounded-xl bg-cream-50 p-3 text-left ring-1 ring-bamboo-400/50 transition active:scale-[0.98]",
-                  p.is_available ? "hover:ring-forest-600" : "opacity-45",
+                  "flex h-28 w-full flex-col justify-between rounded-xl bg-cream-50 p-3 pr-9 text-left lg:h-full lg:flex-row lg:items-center lg:justify-start lg:gap-3 lg:py-2 lg:pr-10 ring-1 ring-bamboo-400/50 transition active:scale-[0.98]",
+                  isSoldOut(p) ? "opacity-50" : "hover:ring-forest-600",
                 )}
               >
-                <span className="text-2xl" aria-hidden>{EMOJI[mealKind(p.slug, p.name)]}</span>
-                <span>
-                  <span className="block text-sm font-bold leading-tight text-wood-800">{p.name}</span>
-                  <span className="text-sm font-extrabold text-forest-700">{peso(p.price)}</span>
+                {p.pos_icon_url ? (
+                  <Image src={p.pos_icon_url} alt="" width={160} height={160} sizes="80px" className="h-10 w-14 shrink-0 object-contain lg:h-12 lg:w-16 xl:h-14 xl:w-[4.5rem] 2xl:h-16 2xl:w-20" />
+                ) : (
+                  <span className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl" aria-hidden>{EMOJI[mealKind(p.slug, p.name)]}</span>
+                )}
+                <span className="min-w-0">
+                  <span className="line-clamp-2 text-sm font-bold leading-tight text-wood-800 lg:text-base 2xl:text-lg">{p.name}</span>
+                  <span className="flex items-baseline justify-between gap-1">
+                    <span className="text-sm font-extrabold text-forest-700 lg:text-base 2xl:text-lg">{peso(p.price)}</span>
+                    {isSoldOut(p) ? (
+                      <span className="rounded bg-terracotta-600 px-1.5 text-[0.7rem] font-bold uppercase text-cream-50">Sold out</span>
+                    ) : servingsLeft(p) !== null ? (
+                      <span className={cn("text-xs font-bold", (servingsLeft(p) ?? 0) <= 5 ? "text-terracotta-600" : "text-ink-muted")}>{servingsLeft(p)} left</span>
+                    ) : null}
+                  </span>
                 </span>
               </button>
               <button
                 type="button"
-                onClick={() => toggleAvailability(p)}
-                className="absolute right-1.5 top-1.5 rounded-md bg-cream-200/90 px-1.5 py-0.5 text-[0.65rem] font-bold text-wood-600 hover:bg-cream-300"
-                title={p.is_available ? "Mark sold out" : "Mark available"}
+                onClick={() => setStockFor(p)}
+                className="absolute right-1.5 top-1.5 rounded-md bg-cream-200/90 p-1 text-wood-600 hover:bg-cream-300"
+                title="Stock / sold out"
+                aria-label={`Stock for ${p.name}`}
               >
-                {p.is_available ? <Ban className="size-3.5" /> : "Restock"}
+                <Package className="size-3.5" />
               </button>
             </div>
           ))}
@@ -240,7 +264,7 @@ export function Register(props: {
       </section>
 
       {/* Ticket */}
-      <aside className="flex flex-col bg-cream-50 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)]">
+      <aside className="flex flex-col bg-cream-50 lg:min-h-0">
         <div className="flex items-center justify-between border-b border-bamboo-300/50 px-4 py-3">
           <h1 className="font-display text-xl font-bold text-wood-800">Current sale</h1>
           {lines.length > 0 ? <Button variant="ghost" size="sm" onClick={reset}><X /> Clear</Button> : null}
@@ -410,8 +434,8 @@ export function Register(props: {
             {addonsFor(editingLine.product.id).map((a) => (
               <Checkbox
                 key={a.id}
-                label={`${a.name} (+${peso(a.price)})${a.is_available ? "" : " — sold out"}`}
-                disabled={!a.is_available}
+                label={`${a.name} (+${peso(a.price)})${isSoldOut(a) ? " — sold out" : ""}`}
+                disabled={isSoldOut(a)}
                 checked={editingLine.addons.some((x) => x.id === a.id)}
                 onChange={(e) =>
                   setLines((ls) => ls.map((l) => (l.key === editingLine.key ? { ...l, addons: e.target.checked ? [...l.addons, a] : l.addons.filter((x) => x.id !== a.id) } : l)))
@@ -424,6 +448,14 @@ export function Register(props: {
           </div>
         ) : null}
       </Dialog>
+
+      {stockFor ? (
+        <StockDialog
+          product={stockFor}
+          onClose={() => setStockFor(null)}
+          onSaved={(msg) => { setStockFor(null); toast.success(msg); router.refresh(); }}
+        />
+      ) : null}
 
       <CustomerSearch open={customerDialog} onClose={() => setCustomerDialog(false)} onPick={(c) => { setCustomer(c); setCustomerDialog(false); }} />
 
@@ -508,6 +540,62 @@ function CustomerSearch({ open, onClose, onPick }: { open: boolean; onClose: () 
           </li>
         ))}
       </ul>
+    </Dialog>
+  );
+}
+
+/** Staff set servings for the day, restock, or switch an item off. */
+function StockDialog({ product, onClose, onSaved }: { product: Product; onClose: () => void; onSaved: (msg: string) => void }) {
+  const [track, setTrack] = useState(product.track_stock);
+  const [qty, setQty] = useState(String(product.stock_quantity));
+  const [available, setAvailable] = useState(product.is_available);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, startSave] = useTransition();
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={product.name}
+      description="Servings stock goes down with every order. At 0 it shows Sold out on the menu and here."
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={busy || (track && !(Number(qty) >= 0))}
+            onClick={() =>
+              startSave(async () => {
+                setError(null);
+                const s = await setStock(product.id, track, track ? Math.floor(Number(qty)) : 0);
+                if (!s.ok) return setError(s.error);
+                if (available !== product.is_available) {
+                  const a = await setAvailability(product.id, available);
+                  if (!a.ok) return setError(a.error);
+                }
+                onSaved(!available ? `${product.name} switched off.` : track ? `${product.name}: ${Math.floor(Number(qty))} servings.` : `${product.name}: no stock limit.`);
+              })
+            }
+          >
+            {busy ? <Loader2 className="animate-spin" /> : null} Save
+          </Button>
+        </>
+      }
+    >
+      {error ? <Alert tone="error" className="mb-3">{error}</Alert> : null}
+      <div className="space-y-4">
+        <Checkbox label="Count servings for this item" checked={track} onChange={(e) => setTrack(e.target.checked)} />
+        {track ? (
+          <Field label="Servings left" htmlFor="stock-qty" hint="Set this at opening, and add to it when you cook more.">
+            <div className="flex gap-2">
+              <Input id="stock-qty" type="number" min={0} step={1} inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} className="h-11 text-lg font-bold" />
+              {[10, 20].map((n) => (
+                <Button key={n} variant="outline" onClick={() => setQty(String((Number(qty) || 0) + n))}>+{n}</Button>
+              ))}
+              <Button variant="outline" onClick={() => setQty("0")}>0</Button>
+            </div>
+          </Field>
+        ) : null}
+        <Checkbox label="Available (untick to mark sold out right away)" checked={available} onChange={(e) => setAvailable(e.target.checked)} />
+      </div>
     </Dialog>
   );
 }

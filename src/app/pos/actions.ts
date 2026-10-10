@@ -230,3 +230,15 @@ export async function setMyPin(pin: string): Promise<ActionResult> {
   revalidatePath("/pos/me");
   return ok(undefined);
 }
+
+export async function setStock(productId: string, track: boolean, quantity: number): Promise<ActionResult> {
+  const supabase = await staffClient();
+  if (!supabase) return denied;
+  if (!Number.isInteger(quantity) || quantity < 0) return { ok: false, error: "Servings must be 0 or more." };
+  const { error } = await supabase.rpc("set_product_stock", { p_product_id: productId, p_track: track, p_quantity: quantity });
+  if (error) return toFailure(error);
+  revalidatePath("/pos");
+  revalidatePath("/menu", "layout");
+  revalidatePath("/");
+  return ok(undefined);
+}

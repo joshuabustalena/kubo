@@ -81,6 +81,8 @@ export type Product = {
   description: string;
   price: number;
   image_url: string | null;
+  /** Small cut-out picture for the POS tiles (separate from the menu photo). */
+  pos_icon_url?: string | null;
   is_available: boolean;
   is_archived: boolean;
   is_addon: boolean;
@@ -88,7 +90,19 @@ export type Product = {
   is_featured: boolean;
   sort_order: number;
   is_demo: boolean;
+  track_stock: boolean;
+  stock_quantity: number;
 };
+
+/** Sold out = switched off by staff, or tracked servings ran out. */
+export function isSoldOut(p: { is_available: boolean; track_stock?: boolean; stock_quantity?: number }): boolean {
+  return !p.is_available || (!!p.track_stock && (p.stock_quantity ?? 0) <= 0);
+}
+
+/** Servings left for tracked items, otherwise null (unlimited). */
+export function servingsLeft(p: { track_stock?: boolean; stock_quantity?: number }): number | null {
+  return p.track_stock ? Math.max(0, p.stock_quantity ?? 0) : null;
+}
 
 export type PaymentMethod = {
   code: string;

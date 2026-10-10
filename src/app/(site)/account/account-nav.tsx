@@ -14,7 +14,7 @@ const TABS = [
 export function AccountNav() {
   const path = usePathname();
   return (
-    <nav aria-label="Account" className="scrollbar-none mt-5 flex gap-1 overflow-x-auto border-b border-bamboo-300/60">
+    <nav aria-label="Account" className="mt-5 flex flex-wrap gap-x-1 border-b border-bamboo-300/60">
       {TABS.map((t) => {
         const active = t.href === "/account" ? path === "/account" : path.startsWith(t.href);
         return (

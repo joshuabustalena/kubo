@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Table, Td, Th, Tr } from "@/components/ui/table";
 import { peso, percent } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import type { Category, Product } from "@/lib/types";
+import { isSoldOut, servingsLeft, type Category, type Product } from "@/lib/types";
 import { ProductToggles } from "./product-toggles";
 
 export const metadata: Metadata = { title: "Menu items" };
@@ -48,7 +48,7 @@ export default async function AdminMenuPage(props: PageProps<"/admin/menu">) {
               {!c.is_active ? <Badge>Hidden category</Badge> : null}
             </div>
             <Table>
-              <thead><tr><Th>Item</Th><Th className="text-right">Price</Th><Th className="text-right">Cost (dine-in)</Th><Th className="text-right">Margin</Th><Th>Flags</Th><Th>Quick actions</Th></tr></thead>
+              <thead><tr><Th>Item</Th><Th className="text-right">Price</Th><Th className="text-right">Cost (dine-in)</Th><Th className="text-right">Margin</Th><Th>Stock</Th><Th>Flags</Th><Th>Quick actions</Th></tr></thead>
               <tbody>
                 {list.map((p) => {
                   const k = cost.get(p.id) as { dine_in_cost: number; dine_in_margin: number; has_recipe: boolean } | undefined;
@@ -63,6 +63,9 @@ export default async function AdminMenuPage(props: PageProps<"/admin/menu">) {
                       <Td className="text-right font-semibold tabular-nums">{peso(p.price)}</Td>
                       <Td className="text-right tabular-nums">{k?.has_recipe ? peso(k.dine_in_cost) : <Link href="/admin/recipes" className="text-terracotta-600 underline">No recipe</Link>}</Td>
                       <Td className="text-right tabular-nums">{k?.has_recipe ? percent(k.dine_in_margin) : "—"}</Td>
+                      <Td className="whitespace-nowrap text-sm">
+                        {isSoldOut(p) ? <Badge tone="red">Sold out</Badge> : servingsLeft(p) !== null ? <span className={(servingsLeft(p) ?? 0) <= 5 ? "font-bold text-terracotta-600" : ""}>{servingsLeft(p)} left</span> : <span className="text-ink-muted">No limit</span>}
+                      </Td>
                       <Td className="space-x-1 whitespace-nowrap">
                         {p.is_addon ? <Badge tone="blue">Add-on</Badge> : null}
                         {p.points_eligible ? <Badge tone="gold">Points</Badge> : null}

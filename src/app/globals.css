@@ -174,12 +174,79 @@ h1, h2, h3, .font-display {
 }
 
 /* Receipt printing: only the receipt is printed, on 58/80 mm paper */
-@media print {
-  @page {
-    margin: 4mm;
+/* -------------------------------------------------------------------------
+   Tables on phones: every row becomes a small card, each cell labelled with
+   its column name (data-label is filled in by <Table>). No sideways scroll.
+   Unlayered on purpose so it wins over the Tailwind padding utilities.
+   ------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  .rtable thead {
+    display: none;
   }
+  .rtable,
+  .rtable tbody,
+  .rtable tr,
+  .rtable td {
+    display: block;
+    width: 100%;
+  }
+  .rtable tr {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgb(176 141 87 / 0.3);
+  }
+  .rtable td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    border: 0;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .rtable td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+  .rtable td[data-label=""]::before,
+  .rtable td:not([data-label])::before {
+    display: none;
+  }
+  .rtable td:empty {
+    display: none;
+  }
+}
+
+@page {
+  margin: 12mm;
+}
+@page receipt {
+  margin: 4mm;
+}
+
+@media print {
   body {
     background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Reports print as full-width documents without the admin chrome */
+  .print-plain {
+    box-shadow: none !important;
+  }
+  details > summary {
+    list-style: none;
+  }
+  .receipt {
+    page: receipt;
   }
   .no-print {
     display: none !important;

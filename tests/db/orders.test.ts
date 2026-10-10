@@ -51,7 +51,7 @@ beforeAll(async () => {
 describe("online ordering", () => {
   let orderId: string;
 
-  it("prices the cart from the database and adds the takeout packaging fee", async () => {
+  it("prices the cart from the database and adds the takeout packaging fee per meal", async () => {
     const res = await rpc<{ order_id: string; order_number: string; total: string }>(db, alice, PLACE, [
       JSON.stringify([
         { product_id: toc, quantity: 3, price: 1 /* ignored */ },
@@ -62,8 +62,9 @@ describe("online ordering", () => {
     ]);
     orderId = res.order_id;
     expect(res.order_number).toMatch(/^JK-\d{6}-\d{4}$/);
-    // 3×70 + 60 + 15 (egg) + 25 = 310, + ₱5 packaging
-    expect(Number(res.total)).toBe(315);
+    // 3×70 + 60 + 15 (egg) + 25 = 310, + ₱5 × 4 meals packaging (the egg add-on and the juice don't count)
+    expect(Number(res.total)).toBe(330);
+    expect(Number((await one<{ packaging_fee: string }>(db, `select packaging_fee from orders where id = $1`, [orderId])).packaging_fee)).toBe(20);
     const o = await one<{ status: string; payment_status: string }>(db, `select * from orders where id = $1`, [orderId]);
     expect(o.status).toBe("pending");
     expect(o.payment_status).toBe("unpaid");
@@ -126,7 +127,7 @@ describe("online ordering", () => {
     const tocinoBefore = await stock("TOCI-01");
     const containersBefore = await stock("CONT-01");
     const pay = await rpc<{ change: string }>(db, staff, `select public.record_order_payment($1, 'cash', 500, null)`, [orderId]);
-    expect(Number(pay.change)).toBe(185);
+    expect(Number(pay.change)).toBe(170); // 500 − 330
     await setStatus(staff, orderId, "completed");
     await setStatus(staff, orderId, "completed"); // retried request
     await rpc(db, null, `select 1`);
@@ -361,7 +362,7 @@ describe("quotes", () => {
       [JSON.stringify([{ product_id: toc, quantity: 5 }])],
     );
     expect(q.ok).toBe(true);
-    expect(Number(q.total)).toBe(350 + 5 - 25);
+    expect(Number(q.total)).toBe(350 + 5 * 5 - 25); // ₱5 packaging × 5 meals
     expect(q.points).toBe(10);
     const bad = await rpc<{ ok: boolean; error: string }>(
       db, bob, `select public.quote_order('online', $1::jsonb, 'takeout', 'cash', 'BARKADA25', null)`,
@@ -409,5 +410,38 @@ describe("username accounts", () => {
       JSON.stringify({ username: "juan.dc", phone: "09179999999" })])).rejects.toThrow(/duplicate|unique/);
     await expect(asUser(db, id, (tx) => tx.query(`update profiles set username = 'admin' where id = $1`, [id]))).rejects.toThrow(/cannot be edited/);
     await asUser(db, id, (tx) => tx.query(`update profiles set full_name = 'Juan Dela Cruz', phone = '09170000000' where id = $1`, [id]));
+  });
+});
+
+describe("servings stock", () => {
+  const stockOf = async (id: string) => (await one<{ s: number; t: boolean }>(db, `select stock_quantity s, track_stock t from products where id = $1`, [id]));
+
+  it("only staff can set stock", async () => {
+    await expect(rpc(db, bob, `select public.set_product_stock($1, true, 5)`, [chick])).rejects.toThrow(/Staff access/);
+    await rpc(db, staff, `select public.set_product_stock($1, true, 3)`, [chick]);
+    expect(await stockOf(chick)).toMatchObject({ s: 3, t: true });
+  });
+
+  it("deducts on order, blocks over-ordering and sells out", async () => {
+    const q = await rpc<{ ok: boolean; error: string }>(db, bob, `select public.quote_order('online', $1::jsonb, 'dine_in', 'cash', null, null)`,
+      [JSON.stringify([{ product_id: chick, quantity: 5 }])]);
+    expect(q).toMatchObject({ ok: false });
+    expect(q.error).toMatch(/Only 3 left/);
+    expect((await stockOf(chick)).s).toBe(3); // quotes never consume stock
+    const o = await rpc<{ order_id: string }>(db, bob, PLACE, [JSON.stringify([{ product_id: chick, quantity: 2 }]), "dine_in", "cash", null, null, null, null, key()]);
+    expect((await stockOf(chick)).s).toBe(1);
+    await pos(staff, { items: [{ product_id: chick, quantity: 1 }] });
+    expect((await stockOf(chick)).s).toBe(0);
+    await expect(pos(staff, { items: [{ product_id: chick, quantity: 1 }] })).rejects.toThrow(/sold out/);
+    await expect(rpc(db, bob, PLACE, [JSON.stringify([{ product_id: chick, quantity: 1 }]), "dine_in", "cash", null, null, null, null, key()]))
+      .rejects.toThrow(/sold out/);
+    // cancelling gives the servings back
+    await rpc(db, bob, `select public.cancel_my_order($1, null)`, [o.order_id]);
+    expect((await stockOf(chick)).s).toBe(2);
+  });
+
+  it("untracked items are unlimited", async () => {
+    await rpc(db, staff, `select public.set_product_stock($1, false, 0)`, [chick]);
+    await pos(staff, { items: [{ product_id: chick, quantity: 20 }], tendered: 5000 });
   });
 });
