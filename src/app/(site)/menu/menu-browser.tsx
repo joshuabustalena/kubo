@@ -62,7 +62,7 @@ export function MenuBrowser({ menu, rules, initialCategory }: { menu: Menu; rule
             <section key={c.id} aria-labelledby={`cat-${c.slug}`}>
               <h2 id={`cat-${c.slug}`} className="font-display text-2xl font-extrabold text-forest-800">{c.name}</h2>
               {c.description ? <p className="mb-4 text-sm text-ink-muted">{c.description}</p> : null}
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {products.map((p, i) => (
                   <ProductCard key={p.id} product={p} rules={rules} priority={gi === 0 && i < 3} />
                 ))}

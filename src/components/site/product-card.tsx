@@ -20,32 +20,40 @@ export function ProductCard({ product, rules, priority }: { product: MenuProduct
   const left = servingsLeft(product);
 
   return (
-    <article className="paper group flex flex-col overflow-hidden transition-shadow hover:shadow-[var(--shadow-lift)]">
-      <Link href={`/menu/${product.slug}`} className="relative block" aria-label={`${product.name} details`}>
-        <ProductImage src={product.image_url} slug={product.slug} name={product.name} priority={priority} />
+    <article className="paper group flex overflow-hidden transition-shadow hover:shadow-[var(--shadow-lift)] sm:flex-col">
+      {/* Phones: compact row (small photo left) so more of the menu fits on screen; sm+: big card */}
+      <Link href={`/menu/${product.slug}`} className="relative m-2 mr-0 block w-32 shrink-0 overflow-hidden rounded-xl sm:m-0 sm:w-auto sm:rounded-none" aria-label={`${product.name} details`}>
+        <ProductImage
+          src={product.image_url}
+          slug={product.slug}
+          name={product.name}
+          priority={priority}
+          sizes="(max-width: 640px) 140px, 33vw"
+          className="aspect-auto h-full min-h-24 w-full sm:aspect-[4/3] sm:h-auto sm:min-h-0"
+        />
         {soldOut ? (
-          <span className="absolute inset-0 grid place-items-center bg-wood-800/55 font-display text-xl font-bold text-cream-50">Sold out</span>
+          <span className="absolute inset-0 grid place-items-center bg-wood-800/55 font-display text-base font-bold text-cream-50 sm:text-xl">Sold out</span>
         ) : null}
         {tokens > 0 ? (
-          <Badge tone="gold" className="absolute left-3 top-3 shadow-sm" title="Game tokens for the Play Zone">
-            <Ticket className="size-3" /> +{tokens} token{tokens > 1 ? "s" : ""}
+          <Badge tone="gold" className="absolute left-1 top-1 px-1.5 text-[0.65rem] shadow-sm sm:left-3 sm:top-3 sm:px-2 sm:text-xs" title="Game tokens for the Play Zone">
+            <Ticket className="size-3" /> +{tokens}<span className="hidden sm:inline">&nbsp;token{tokens > 1 ? "s" : ""}</span>
           </Badge>
         ) : null}
       </Link>
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <Link href={`/menu/${product.slug}`} className="font-display text-lg font-bold leading-tight text-wood-800 hover:text-forest-700">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <Link href={`/menu/${product.slug}`} className="font-display text-base font-bold leading-tight text-wood-800 hover:text-forest-700 sm:text-lg">
             {product.name}
           </Link>
-          <span className="shrink-0 font-display text-lg font-extrabold text-forest-700">{peso(product.price)}</span>
+          <span className="shrink-0 font-display text-base font-extrabold text-forest-700 sm:text-lg">{peso(product.price)}</span>
         </div>
-        <p className="line-clamp-2 text-sm text-ink-muted">{product.description}</p>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+        <p className="line-clamp-2 text-xs text-ink-muted sm:text-sm">{product.description}</p>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1.5 sm:pt-3">
           {!soldOut && left !== null && left <= 5 ? (
-            <span className="text-sm font-bold text-terracotta-600">Only {left} left!</span>
+            <span className="text-xs font-bold text-terracotta-600 sm:text-sm">Only {left} left!</span>
           ) : product.addons.length > 0 ? (
-            <Link href={`/menu/${product.slug}`} className="text-sm font-semibold text-forest-700 hover:underline">
-              Add-ons available
+            <Link href={`/menu/${product.slug}`} className="text-xs font-semibold text-forest-700 hover:underline sm:text-sm">
+              Add-ons<span className="hidden sm:inline"> available</span>
             </Link>
           ) : (
             <span />
@@ -67,7 +75,7 @@ export function ProductCard({ product, rules, priority }: { product: MenuProduct
               });
               toast.success(`${product.name} added to your tray.`);
             }}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-forest-800 px-3.5 text-sm font-semibold text-cream-50 hover:bg-forest-700 disabled:opacity-40"
+            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-forest-800 px-3 text-xs font-semibold text-cream-50 hover:bg-forest-700 disabled:opacity-40 sm:h-10 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-sm"
           >
             <Plus className="size-4" /> Add
           </button>

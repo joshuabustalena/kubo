@@ -87,7 +87,7 @@ export function AddToCart({ product, rules }: { product: MenuProduct; rules: Poi
       ) : null}
 
       <Field label="Special instructions (optional)" htmlFor="notes">
-        <Textarea id="notes" value={notes} maxLength={200} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. well-done egg, less rice" className="min-h-16" />
+        <Textarea id="notes" value={notes} maxLength={200} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. less rice, extra gravy" className="min-h-16" />
       </Field>
 
       <div className="flex flex-wrap items-center gap-3">

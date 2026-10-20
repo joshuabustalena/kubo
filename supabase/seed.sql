@@ -12,7 +12,7 @@
 update public.store_settings set
   store_name = 'Kainan sa Kubo',
   tagline = 'Sulit Java Rice meals, kubo style.',
-  about = 'Kainan sa Kubo started as a small bamboo kubo near campus serving garlicky, golden Java Rice meals that students can afford every day. Every meal comes on a black tray lined with greaseproof paper, with a free cup of iced tea.',
+  about = 'Kainan sa Kubo started as a small bamboo kubo near campus serving garlicky, golden Java Rice meals that students can afford every day. Every meal comes on a black tray lined with greaseproof paper, with free drinks.',
   address = 'Zone 6, Camaya, Mariveles, Bataan',
   phone = '0909 864 4862',
   email = '',
@@ -34,24 +34,24 @@ insert into public.categories (name, slug, description, sort_order, is_addon_cat
   ('Pork Meals', 'pork-meals', 'Liempo and porkchop, grilled and fried.', 4, false, true),
   ('Sisig Meals', 'sisig-meals', 'Sizzling sisig over Java Rice.', 5, false, true),
   ('Fish Meals', 'fish-meals', 'Daing na bangus and crispy fish fillet.', 6, false, true),
-  ('Drinks and Add-ons', 'drinks-and-add-ons', 'Extra rice, egg, gravy and drinks.', 7, true, true);
+  ('Drinks and Add-ons', 'drinks-and-add-ons', 'Extra rice, gravy, fries and drinks.', 7, true, true);
 
 -- Products --------------------------------------------------------------------
 insert into public.products (category_id, name, slug, description, price, is_addon, points_eligible, is_featured, sort_order, is_demo)
 select c.id, v.name, v.slug, v.description, v.price, v.is_addon, v.points_eligible, v.featured, v.sort_order, true
 from (values
-  ('java-rice-meals', 'Java Long', 'java-long', 'Sweet-garlic longganisa, fried egg and Java Rice. Free iced tea.', 65, false, true, true, 1),
-  ('java-rice-meals', 'Java Toc', 'java-toc', 'Caramelized pork tocino, fried egg and Java Rice. Free iced tea.', 70, false, true, true, 2),
-  ('hotdog-meals', 'Java Dawg', 'java-dawg', 'Jumbo red hotdog, fried egg and Java Rice. Free iced tea.', 60, false, true, true, 1),
-  ('hotdog-meals', 'Cheesy Java Dawg', 'cheesy-java-dawg', 'Jumbo hotdog topped with melted cheese, egg and Java Rice. Free iced tea.', 65, false, true, false, 2),
-  ('chicken-meals', 'Java Chick', 'java-chick', 'Crispy fried chicken with house gravy and Java Rice. Free iced tea.', 85, false, true, true, 1),
-  ('chicken-meals', 'Java Chicken Pops', 'java-chicken-pops', 'Bite-size chicken pops with gravy and Java Rice. Free iced tea.', 75, false, true, false, 2),
-  ('pork-meals', 'Java Liempo', 'java-liempo', 'Grilled pork belly with atchara and Java Rice. Free iced tea.', 95, false, true, true, 1),
-  ('pork-meals', 'Java Porkchop', 'java-porkchop', 'Crispy fried porkchop with gravy and Java Rice. Free iced tea.', 90, false, true, false, 2),
-  ('sisig-meals', 'Java Sisig', 'java-sisig', 'Sizzling pork sisig with calamansi and Java Rice. Free iced tea.', 80, false, true, true, 1),
-  ('sisig-meals', 'Java Sisig Supreme', 'java-sisig-supreme', 'Pork sisig topped with egg and mayo, with Java Rice. Free iced tea.', 95, false, true, false, 2),
-  ('fish-meals', 'Java Bangus', 'java-bangus', 'Daing na bangus with atchara and Java Rice. Free iced tea.', 90, false, true, false, 1),
-  ('fish-meals', 'Java Fish Fillet', 'java-fish-fillet', 'Crispy fish fillet with tartar dip and Java Rice. Free iced tea.', 75, false, true, false, 2),
+  ('java-rice-meals', 'Java Long', 'java-long', 'Sweet-garlic longganisa with Java Rice. Free drinks.', 65, false, true, true, 1),
+  ('java-rice-meals', 'Java Toc', 'java-toc', 'Caramelized pork tocino with Java Rice. Free drinks.', 70, false, true, true, 2),
+  ('hotdog-meals', 'Java Dawg', 'java-dawg', 'Jumbo red hotdog with Java Rice. Free drinks.', 60, false, true, true, 1),
+  ('hotdog-meals', 'Cheesy Java Dawg', 'cheesy-java-dawg', 'Jumbo hotdog topped with melted cheese, with Java Rice. Free drinks.', 65, false, true, false, 2),
+  ('chicken-meals', 'Java Chick', 'java-chick', 'Crispy fried chicken with house gravy and Java Rice. Free drinks.', 85, false, true, true, 1),
+  ('chicken-meals', 'Java Chicken Pops', 'java-chicken-pops', 'Bite-size chicken pops with gravy and Java Rice. Free drinks.', 75, false, true, false, 2),
+  ('pork-meals', 'Java Liempo', 'java-liempo', 'Grilled pork belly with Java Rice. Free drinks.', 95, false, true, true, 1),
+  ('pork-meals', 'Java Porkchop', 'java-porkchop', 'Crispy fried porkchop with gravy and Java Rice. Free drinks.', 90, false, true, false, 2),
+  ('sisig-meals', 'Java Sisig', 'java-sisig', 'Sizzling pork sisig with calamansi and Java Rice. Free drinks.', 80, false, true, true, 1),
+  ('sisig-meals', 'Java Sisig Supreme', 'java-sisig-supreme', 'Pork sisig topped with egg and mayo, with Java Rice. Free drinks.', 95, false, true, false, 2),
+  ('fish-meals', 'Java Bangus', 'java-bangus', 'Daing na bangus with atchara and Java Rice. Free drinks.', 90, false, true, false, 1),
+  ('fish-meals', 'Java Fish Fillet', 'java-fish-fillet', 'Crispy fish fillet with tartar dip and Java Rice. Free drinks.', 75, false, true, false, 2),
   ('drinks-and-add-ons', 'Extra Java Rice', 'extra-java-rice', 'One more cup of garlicky Java Rice.', 20, true, false, false, 1),
   ('drinks-and-add-ons', 'Fried Egg', 'fried-egg', 'Sunny side up or well done, just ask.', 15, true, false, false, 2),
   ('drinks-and-add-ons', 'Extra Gravy', 'extra-gravy', 'A cup of our house gravy.', 10, true, false, false, 3),
@@ -330,7 +330,7 @@ insert into public.quiz_questions (question, choices, correct_index, explanation
   ('How many loyalty points does a ₱65 meal earn?', '["0","1","2","3"]', 1, 'Meals ₱65 and below earn 1 point.'),
   ('How many loyalty points does a ₱70 meal earn?', '["1","2","3","5"]', 1, 'Meals above ₱65 earn 2 points.'),
   ('Which meal comes with a jumbo hotdog?', '["Java Toc","Java Long","Java Dawg","Java Chick"]', 2, 'Java Dawg is our hotdog meal.'),
-  ('What drink comes free with every Kainan sa Kubo meal?', '["Calamansi juice","Iced tea","Bottled water","Coffee"]', 1, 'Every meal comes with a free cup of iced tea.'),
+  ('What drink comes free with every Kainan sa Kubo meal?', '["Calamansi juice","Iced tea","Bottled water","Coffee"]', 1, 'Every meal comes with free drinks.'),
   ('Tocino is traditionally what kind of meat?', '["Beef","Chicken","Sweet-cured pork","Fish"]', 2, 'Tocino is sweet-cured pork.'),
   ('Sisig is famously from which province?', '["Cebu","Pampanga","Ilocos Norte","Batangas"]', 1, 'Sisig comes from Pampanga.'),
   ('What is "daing na bangus"?', '["Grilled squid","Marinated milkfish","Fried tilapia","Shrimp paste"]', 1, 'Daing na bangus is vinegar-marinated milkfish.'),

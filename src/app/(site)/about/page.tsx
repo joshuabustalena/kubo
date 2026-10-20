@@ -26,7 +26,7 @@ export default async function AboutPage() {
         {[
           { icon: Sparkles, title: "Golden Java Rice", text: "Garlic, atsuete and margarine, fried fresh every batch." },
           { icon: Users, title: "Made for students", text: "Prices that fit an allowance, portions that fill you up." },
-          { icon: Leaf, title: "Kubo hospitality", text: "Black trays, greaseproof paper, free iced tea — the kubo way." },
+          { icon: Leaf, title: "Kubo hospitality", text: "Black trays, greaseproof paper, free drinks — the kubo way." },
         ].map((f) => (
           <div key={f.title} className="paper p-5">
             <f.icon className="size-6 text-leaf-600" />

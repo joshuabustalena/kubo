@@ -12,7 +12,7 @@ export default async function MenuPage(props: PageProps<"/menu">) {
     <div className="mx-auto max-w-6xl px-4 pb-6 pt-8">
       <AutoRefresh seconds={20} />
       <h1 className="font-display text-4xl font-extrabold text-forest-800">Our menu</h1>
-      <p className="text-ink-muted">All meals come with golden Java Rice and a free cup of iced tea.</p>
+      <p className="text-ink-muted">All meals come with golden Java Rice and free drinks.</p>
       <div className="mt-4">
         <MenuBrowser menu={menu} rules={settings} initialCategory={typeof sp.category === "string" ? sp.category : undefined} />
       </div>

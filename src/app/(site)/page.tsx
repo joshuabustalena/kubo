@@ -32,7 +32,7 @@ export default async function HomePage(props: PageProps<"/">) {
               <span className="text-wood-600">sulit</span> every day.
             </h1>
             <p className="mt-4 max-w-lg text-lg text-ink-soft">
-              {settings.tagline} Every meal comes on a black tray with greaseproof paper and a free cup of iced tea.
+              {settings.tagline} Every meal comes on a black tray with greaseproof paper and free drinks.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <ButtonLink href="/menu" size="lg">Order now <ArrowRight /></ButtonLink>
@@ -102,7 +102,7 @@ export default async function HomePage(props: PageProps<"/">) {
           </div>
           <ButtonLink href="/menu" variant="outline" size="sm">Full menu <ArrowRight /></ButtonLink>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {featured.map((p) => (
             <ProductCard key={p.id} product={p} rules={settings} />
           ))}
