@@ -18,6 +18,19 @@ const itemSchema = z.object({
   is_archived: z.boolean(),
 });
 
+/**
+ * Next free SKU: first 3 letters of the category + one running number shared by all
+ * categories (ING-0001, PAC-0002, …). The database trigger (migration ..._inventory_sku)
+ * keeps it permanent; this also works before that migration is applied.
+ */
+async function nextSku(supabase: NonNullable<Awaited<ReturnType<typeof adminClient>>>["supabase"], category: string) {
+  const letters = category.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
+  const prefix = letters.length === 3 ? letters : "INV";
+  const { data } = await supabase.from("inventory_items").select("sku");
+  const max = Math.max(0, ...(data ?? []).map((r: { sku: string }) => Number(/-(\d+)$/.exec(r.sku)?.[1] ?? 0)));
+  return `${prefix}-${String(max + 1).padStart(4, "0")}`;
+}
+
 export async function saveItem(_: FormState, form: FormData): Promise<FormState> {
   const ctx = await adminClient();
   if (!ctx) return { error: notAdmin.error };
@@ -39,8 +52,16 @@ export async function saveItem(_: FormState, form: FormData): Promise<FormState>
     const { error } = await supabase.from("inventory_items").update(parsed.data).eq("id", id);
     if (error) return { error: toFailure(error).error };
   } else {
-    const { data, error } = await supabase.from("inventory_items").insert(parsed.data).select("id").single();
-    if (error) return { error: toFailure(error).error };
+    // Generate the SKU; retry if two items were saved at the same moment and picked the same number
+    let inserted: { id: string } | null = null;
+    for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
+      const sku = await nextSku(supabase, parsed.data.category);
+      const { data: row, error } = await supabase.from("inventory_items").insert({ ...parsed.data, sku }).select("id").single();
+      if (!error) inserted = row;
+      else if (error.code !== "23505") return { error: toFailure(error).error };
+    }
+    if (!inserted) return { error: "Could not create a unique SKU. Please try again." };
+    const data = inserted;
     // Optional opening stock with cost
     const qty = Number(text(form, "opening_qty") || 0);
     const cost = Number(text(form, "opening_cost") || 0);
