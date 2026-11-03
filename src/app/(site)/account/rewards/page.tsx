@@ -1,5 +1,6 @@
 import { Gift, History, Ticket } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
@@ -73,23 +74,32 @@ export default async function RewardsPage() {
         {catalog.length === 0 ? (
           <EmptyState icon={<Ticket />} title="No rewards right now">Check back soon!</EmptyState>
         ) : (
-          <ul className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:grid-cols-3">
             {catalog.map((r) => {
               const short = r.points_cost - user.points_balance;
               return (
-                <li key={r.id} className="flex flex-col rounded-xl border border-bamboo-300/60 bg-white/60 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-display text-lg font-bold leading-tight text-wood-800">{r.name}</p>
-                    <Badge tone="gold">{r.points_cost} pts</Badge>
+                <li key={r.id} className="flex gap-3 rounded-xl border border-bamboo-300/60 bg-white/60 p-3">
+                  <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-cream-200">
+                    {r.product_image ? (
+                      <Image src={r.product_image} alt={r.product_name ?? r.name} fill sizes="80px" className="object-cover" />
+                    ) : (
+                      <span className="grid size-full place-items-center text-gold-700"><Gift className="size-8" /></span>
+                    )}
                   </div>
-                  <p className="mt-1 flex-1 text-sm text-ink-muted">{r.description}</p>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-display text-base font-bold leading-tight text-wood-800">{r.name}</p>
+                    <Badge tone="gold" className="shrink-0">{r.points_cost} pts</Badge>
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 flex-1 text-xs text-ink-muted">{r.description}</p>
                   {r.per_customer_limit ? <p className="mt-1 text-xs text-ink-muted">Limit {r.per_customer_limit} per customer</p> : null}
-                  <div className="mt-3">
+                  <div className="mt-2">
                     {short > 0 ? (
                       <p className="text-sm font-semibold text-ink-muted">{short} more points needed</p>
                     ) : (
                       <RedeemButton rewardId={r.id} name={r.name} cost={r.points_cost} />
                     )}
+                  </div>
                   </div>
                 </li>
               );

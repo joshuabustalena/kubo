@@ -22,7 +22,9 @@ export function ItemForm({ item, suppliers }: { item: InventoryItem | null; supp
       <input type="hidden" name="id" value={item?.id ?? ""} />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Name" htmlFor="name"><Input id="name" name="name" defaultValue={item?.name} required maxLength={120} /></Field>
-        <Field label="SKU / code" htmlFor="sku"><Input id="sku" name="sku" defaultValue={item?.sku} required maxLength={40} className="font-mono uppercase" /></Field>
+        <Field label="SKU / code" htmlFor="sku" hint={item ? "Auto-generated · can't be changed." : "Auto-generated when you save (e.g. ING-0001)."}>
+          <Input id="sku" value={item?.sku ?? "Auto"} readOnly disabled className="font-mono uppercase" />
+        </Field>
         <Field label="Stock unit" htmlFor="unit" hint={item ? "Fixed once stock has moved." : "Recipes can use compatible units (g ↔ kg, ml ↔ L)."}>
           <Select id="unit" name="unit" defaultValue={item?.unit ?? "kg"}>{STOCK_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}</Select>
         </Field>

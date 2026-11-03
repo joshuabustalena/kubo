@@ -183,6 +183,8 @@ export type Reward = {
   value: number;
   product_id: string | null;
   points_cost: number;
+  /** Free-item reward whose points track the menu price (₱5 = 1 point). */
+  follows_menu_price?: boolean;
   is_redeemable: boolean;
   per_customer_limit: number | null;
   total_limit: number | null;

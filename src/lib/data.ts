@@ -69,18 +69,22 @@ export const getActivePromotions = cache(async () => {
   return data ?? [];
 });
 
-export const getRewardsCatalog = cache(async (): Promise<(Reward & { product_name: string | null })[]> => {
+type CatalogReward = Reward & { product_name: string | null; product_image: string | null };
+
+export const getRewardsCatalog = cache(async (): Promise<CatalogReward[]> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("rewards")
-    .select("*, products(name)")
+    .select("*, products(name, image_url)")
     .eq("is_active", true)
     .eq("is_redeemable", true)
-    .order("points_cost");
+    .order("points_cost")
+    .order("name");
   const now = Date.now();
   return (data ?? [])
     .filter((r) => !r.expires_at || new Date(r.expires_at).getTime() > now)
-    .map((r) => ({ ...r, value: Number(r.value), product_name: (r.products as { name: string } | null)?.name ?? null })) as (Reward & {
-    product_name: string | null;
-  })[];
+    .map((r) => {
+      const p = r.products as { name: string; image_url: string | null } | null;
+      return { ...r, value: Number(r.value), product_name: p?.name ?? null, product_image: p?.image_url ?? null };
+    }) as CatalogReward[];
 });

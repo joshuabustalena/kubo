@@ -234,11 +234,14 @@ export function Register(props: {
               >
                 {p.pos_icon_url ? (
                   <Image src={p.pos_icon_url} alt="" width={160} height={160} sizes="80px" className="h-10 w-14 shrink-0 object-contain lg:h-12 lg:w-16 xl:h-14 xl:w-[4.5rem] 2xl:h-16 2xl:w-20" />
+                ) : p.image_url ? (
+                  // No cut-out icon yet: use the menu photo as a rounded thumbnail
+                  <Image src={p.image_url} alt="" width={160} height={160} sizes="80px" className="size-10 shrink-0 rounded-lg object-cover shadow-sm lg:size-12 xl:size-14 2xl:size-16" />
                 ) : (
                   <span className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl" aria-hidden>{EMOJI[mealKind(p.slug, p.name)]}</span>
                 )}
                 <span className="min-w-0">
-                  <span className="line-clamp-2 text-sm font-bold leading-tight text-wood-800 lg:text-base 2xl:text-lg">{p.name}</span>
+                  <span className={cn("block font-bold leading-tight text-wood-800", p.name.length > 16 ? "text-[0.8rem] lg:text-sm 2xl:text-[0.95rem]" : "text-sm lg:text-base 2xl:text-lg")}>{p.name}</span>
                   <span className="flex items-baseline justify-between gap-1">
                     <span className="text-sm font-extrabold text-forest-700 lg:text-base 2xl:text-lg">{peso(p.price)}</span>
                     {isSoldOut(p) ? (

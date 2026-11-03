@@ -96,6 +96,13 @@ function RewardDialog({ reward, products, onClose }: { reward: Reward | null; pr
           )}
         </div>
         <Checkbox name="is_redeemable" label="Customers can redeem it with points (untick for game-only prizes)" defaultChecked={reward?.is_redeemable ?? true} />
+        {type === "free_product" ? (
+          <Checkbox
+            name="follows_menu_price"
+            label="Points follow the menu price (₱5 = 1 point, updates when the price changes)"
+            defaultChecked={reward?.follows_menu_price ?? !reward}
+          />
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Points needed" htmlFor="rw-cost"><Input id="rw-cost" name="points_cost" type="number" min={0} step={1} defaultValue={reward?.points_cost ?? 10} /></Field>
           <Field label="Per customer limit" htmlFor="rw-pcl" hint="Blank = no limit"><Input id="rw-pcl" name="per_customer_limit" type="number" min={1} step={1} defaultValue={reward?.per_customer_limit ?? ""} /></Field>

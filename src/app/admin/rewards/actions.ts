@@ -59,6 +59,7 @@ const rewardSchema = z.object({
   value: z.number().min(0).max(100000),
   product_id: z.uuid().nullable(),
   points_cost: z.number().int().min(0).max(100000),
+  follows_menu_price: z.boolean(),
   is_redeemable: z.boolean(),
   per_customer_limit: z.number().int().positive().nullable(),
   total_limit: z.number().int().positive().nullable(),
@@ -68,7 +69,7 @@ const rewardSchema = z.object({
 }).refine((r) => r.reward_type !== "free_product" || r.product_id, { message: "Pick the free item." })
   .refine((r) => r.reward_type !== "percent_discount" || r.value <= 100, { message: "Percent can't exceed 100." })
   .refine((r) => r.reward_type === "free_product" || r.value > 0, { message: "Enter the discount value." })
-  .refine((r) => !r.is_redeemable || r.points_cost > 0, { message: "Rewards redeemable with points need a points cost." });
+  .refine((r) => !r.is_redeemable || r.follows_menu_price || r.points_cost > 0, { message: "Rewards redeemable with points need a points cost." });
 
 export async function saveReward(_: FormState, form: FormData): Promise<FormState> {
   const ctx = await adminClient();
@@ -82,6 +83,8 @@ export async function saveReward(_: FormState, form: FormData): Promise<FormStat
     value: Number(text(form, "value") || 0),
     product_id: text(form, "product_id") || null,
     points_cost: Number(text(form, "points_cost") || 0),
+    // the database sets points_cost itself for rewards that follow the menu price
+    follows_menu_price: text(form, "reward_type") === "free_product" && bool(form, "follows_menu_price"),
     is_redeemable: bool(form, "is_redeemable"),
     per_customer_limit: optInt("per_customer_limit"),
     total_limit: optInt("total_limit"),
