@@ -46,9 +46,9 @@ export default async function OrderTrackingPage(props: PageProps<"/orders/[id]">
         <div className="p-5">
           <OrderTimeline status={order.status} history={order.history} />
 
-          {order.status === "ready" ? (
-            <Alert tone="success" className="mt-5" title="Your food is ready!">
-              Head to the counter{order.payment_status !== "paid" ? ` and pay ${peso(order.total)}` : ""}.
+          {open && order.payment_status !== "paid" ? (
+            <Alert tone="info" className="mt-5" title="Pay at the counter">
+              Show order number <b>{order.order_number}</b> at the counter and pay {peso(order.total)}. We&apos;ll serve it right away.
             </Alert>
           ) : null}
           {pendingPayment ? (

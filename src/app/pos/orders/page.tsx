@@ -5,26 +5,21 @@ import { AutoRefresh } from "@/components/orders/auto-refresh";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { manilaToday, peso, relativeMinutes, SERVICE_LABEL, timeOnly } from "@/lib/format";
+import { getPaymentMethods } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { QuickAdvance } from "./quick-advance";
 
 export const metadata: Metadata = { title: "Orders" };
 
-const COLUMNS = [
-  { status: "pending", title: "New" },
-  { status: "confirmed", title: "Confirmed" },
-  { status: "preparing", title: "Preparing" },
-  { status: "ready", title: "Ready" },
-] as const;
-
 export default async function PosOrdersPage() {
   const supabase = await createClient();
   const startOfDay = new Date(`${manilaToday()}T00:00:00+08:00`).toISOString();
-  const [{ data: open }, { data: closed }] = await Promise.all([
+  const [{ data: open }, { data: closed }, methods] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, order_number, channel, status, payment_status, service_type, total, customer_name, notes, created_at, order_items(quantity, product_name, parent_item_id, notes)")
+      .select("id, order_number, channel, status, payment_status, service_type, subtotal, packaging_fee, discount_total, discount_reason, total, customer_name, notes, created_at, order_items(id, quantity, product_name, unit_price, line_total, parent_item_id, notes)")
       .in("status", ["pending", "confirmed", "preparing", "ready"])
+      .eq("channel", "online") // POS sales are completed at the register; only online orders wait here
       .order("created_at"),
     supabase
       .from("orders")
@@ -33,6 +28,7 @@ export default async function PosOrdersPage() {
       .gte("created_at", startOfDay)
       .order("updated_at", { ascending: false })
       .limit(40),
+    getPaymentMethods("pos"),
   ]);
 
   return (
@@ -42,18 +38,18 @@ export default async function PosOrdersPage() {
         <h1 className="font-display text-2xl font-bold text-wood-800">Order queue</h1>
         <p className="text-xs text-ink-muted">Refreshes every 10 seconds</p>
       </div>
+      <h2 className="mb-2 flex items-center gap-2 font-display text-xl font-bold text-wood-800">
+        Waiting for payment <span className="rounded-full bg-gold-100 px-2.5 text-sm text-gold-700">{(open ?? []).length}</span>
+      </h2>
       {!open?.length ? (
-        <div className="paper"><EmptyState icon={<ClipboardList />} title="No open orders">New online and POS orders will appear here.</EmptyState></div>
+        <div className="paper"><EmptyState icon={<ClipboardList />} title="No orders waiting">Online orders show up here until the customer pays at the counter.</EmptyState></div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {COLUMNS.map((col) => {
-            const list = (open ?? []).filter((o) => o.status === col.status);
+        <div>
+          {[0].map((col) => {
+            const list = open ?? [];
             return (
-              <section key={col.status} className="rounded-2xl bg-cream-200/50 p-2">
-                <h2 className="flex items-center justify-between px-2 py-1 font-display text-lg font-bold text-wood-700">
-                  {col.title} <span className="rounded-full bg-cream-50 px-2 text-sm">{list.length}</span>
-                </h2>
-                <ul className="space-y-2">
+              <section key={col}>
+                <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {list.map((o) => (
                     <li key={o.id} className="paper p-3">
                       <Link href={`/pos/orders/${o.id}`} className="block">
@@ -78,7 +74,19 @@ export default async function PosOrdersPage() {
                         {o.notes ? <p className="mt-1 rounded bg-gold-100 px-2 py-1 text-xs">{o.notes}</p> : null}
                         <div className="mt-2"><PaymentStatusBadge status={o.payment_status} /></div>
                       </Link>
-                      <QuickAdvance orderId={o.id} status={o.status} paid={o.payment_status === "paid"} />
+                      <QuickAdvance
+                        orderId={o.id}
+                        paid={o.payment_status === "paid"}
+                        methods={methods}
+                        bill={{
+                          items: (o.order_items as { id: string; quantity: number; product_name: string; unit_price: number; line_total: number; parent_item_id: string | null }[]).map((i) => ({ ...i, unit_price: Number(i.unit_price), line_total: Number(i.line_total) })),
+                          subtotal: Number(o.subtotal),
+                          packaging_fee: Number(o.packaging_fee),
+                          discount_total: Number(o.discount_total),
+                          discount_reason: o.discount_reason,
+                          total: Number(o.total),
+                        }}
+                      />
                     </li>
                   ))}
                 </ul>

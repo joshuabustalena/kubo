@@ -2,11 +2,10 @@ import { Check, X } from "lucide-react";
 import { timeOnly } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+// Orders are paid at the counter and completed at once (no kitchen stages)
 const STEPS = [
-  { status: "pending", label: "Order placed" },
-  { status: "confirmed", label: "Confirmed" },
-  { status: "preparing", label: "Preparing" },
-  { status: "ready", label: "Ready for pickup" },
+  { status: "placed", label: "Order placed" },
+  { status: "pending", label: "Pay at the counter" },
   { status: "completed", label: "Completed" },
 ] as const;
 
@@ -23,12 +22,12 @@ export function OrderTimeline({ status, history }: { status: string; history: { 
       </div>
     );
   }
-  const current = STEPS.findIndex((s) => s.status === status);
+  const current = status === "completed" ? 2 : 1;
   return (
-    <ol className="grid grid-cols-5 gap-1" aria-label="Order progress">
+    <ol className="grid grid-cols-3 gap-1" aria-label="Order progress">
       {STEPS.map((s, i) => {
         const done = i <= current;
-        const at = history.find((h) => h.to_status === s.status)?.created_at;
+        const at = history.find((h) => h.to_status === (s.status === "placed" ? "pending" : s.status))?.created_at;
         return (
           <li key={s.status} className="flex flex-col items-center text-center" aria-current={i === current ? "step" : undefined}>
             <div className="flex w-full items-center">

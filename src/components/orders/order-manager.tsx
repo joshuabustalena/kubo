@@ -4,7 +4,7 @@ import { Ban, Check, Loader2, Printer, Undo2, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { recordPayment, refundOrder, updateOrderStatus, verifyPayment } from "@/app/pos/actions";
+import { payAndComplete, recordPayment, refundOrder, updateOrderStatus, verifyPayment } from "@/app/pos/actions";
 import { useOverride } from "@/components/pos/override";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -15,13 +15,6 @@ import { peso } from "@/lib/format";
 import type { OrderDetail } from "@/lib/orders";
 import type { PaymentMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const NEXT: Record<string, { to: string; label: string }[]> = {
-  pending: [{ to: "confirmed", label: "Confirm order" }],
-  confirmed: [{ to: "preparing", label: "Start preparing" }, { to: "ready", label: "Mark ready" }],
-  preparing: [{ to: "ready", label: "Mark ready for pickup" }],
-  ready: [{ to: "completed", label: "Complete (handed over)" }],
-};
 
 /** Staff/admin actions on one order. Every action is re-authorized by the database. */
 export function OrderManager({ order, methods }: { order: OrderDetail; methods: PaymentMethod[] }) {
@@ -36,7 +29,6 @@ export function OrderManager({ order, methods }: { order: OrderDetail; methods: 
 
   const pendingPayment = order.payments.find((p) => p.status === "pending");
   const isOpen = !["completed", "cancelled"].includes(order.status);
-  const canComplete = order.payment_status === "paid";
 
   const act = (fn: () => Promise<{ ok: boolean; error?: string }>, success: string) =>
     start(async () => {
@@ -72,19 +64,13 @@ export function OrderManager({ order, methods }: { order: OrderDetail; methods: 
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {isOpen
-          ? (NEXT[order.status] ?? []).map((n) => (
-              <Button
-                key={n.to}
-                disabled={busy || (n.to === "completed" && !canComplete)}
-                onClick={() => act(() => updateOrderStatus(order.id, n.to, "", null), `Order ${n.label.toLowerCase()}.`)}
-              >
-                {busy ? <Loader2 className="animate-spin" /> : null} {n.label}
-              </Button>
-            ))
-          : null}
-        {isOpen && order.payment_status === "unpaid" ? (
-          <Button variant="gold" onClick={() => setPayOpen(true)}><Wallet /> Take payment</Button>
+        {isOpen && order.payment_status !== "paid" ? (
+          <Button onClick={() => setPayOpen(true)}><Wallet /> Take payment</Button>
+        ) : null}
+        {isOpen && order.payment_status === "paid" ? (
+          <Button disabled={busy} onClick={() => act(() => payAndComplete(order.id), "Order completed.")}>
+            {busy ? <Loader2 className="animate-spin" /> : <Check />} Complete
+          </Button>
         ) : null}
         {isOpen ? (
           <Button variant="outline" className="text-terracotta-600" onClick={() => setCancelOpen(true)}>
@@ -98,9 +84,8 @@ export function OrderManager({ order, methods }: { order: OrderDetail; methods: 
           <Printer className="size-4" /> Receipt
         </Link>
       </div>
-      {isOpen && order.status === "ready" && !canComplete ? <p className="text-sm text-ink-muted">Take payment before completing this order.</p> : null}
 
-      <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)} order={order} methods={methods} onDone={(change) => { setPayOpen(false); toast.success(change > 0 ? `Paid. Change: ${peso(change)}` : "Payment recorded."); router.refresh(); }} />
+      <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)} onCancelled={() => { setPayOpen(false); toast.success("Order cancelled."); router.refresh(); }} orderId={order.id} bill={order} methods={methods} onDone={(change) => { setPayOpen(false); toast.success(change > 0 ? `Paid and completed. Change: ${peso(change)}` : "Paid and completed."); router.refresh(); }} />
 
       <CancelDialog
         open={cancelOpen}
@@ -134,38 +119,116 @@ export function OrderManager({ order, methods }: { order: OrderDetail; methods: 
   );
 }
 
-function PaymentDialog({ open, onClose, order, methods, onDone }: { open: boolean; onClose: () => void; order: OrderDetail; methods: PaymentMethod[]; onDone: (change: number) => void }) {
+/** What the customer is paying for, shown in the Take payment window. */
+export type Bill = {
+  items: { id?: string; quantity: number; product_name: string; unit_price: number; line_total: number; parent_item_id: string | null }[];
+  subtotal: number;
+  packaging_fee: number;
+  discount_total: number;
+  discount_reason?: string | null;
+  total: number;
+};
+
+/** Takes payment at the counter and completes the order in the same step. */
+export function PaymentDialog({ open, onClose, orderId, bill, methods, onDone, onCancelled }: { open: boolean; onClose: () => void; orderId: string; bill: Bill; methods: PaymentMethod[]; onDone: (change: number) => void; onCancelled?: () => void }) {
+  const total = bill.total;
+  const meals = bill.items.filter((i) => !i.parent_item_id);
+  const addonsOf = (id?: string) => (id ? bill.items.filter((a) => a.parent_item_id === id) : []);
   const [method, setMethod] = useState(methods[0]?.code ?? "");
   const [tendered, setTendered] = useState("");
   const [reference, setReference] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
+  // Wrong or duplicate order: cancel it from here (unpaid orders need no PIN)
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState("");
   const m = methods.find((x) => x.code === method);
   const cash = Number(tendered) || 0;
+  const close = () => { setCancelling(false); setReason(""); setError(null); onClose(); };
+  const cancelOrder = () =>
+    start(async () => {
+      setError(null);
+      const res = await updateOrderStatus(orderId, "cancelled", reason.trim(), null);
+      if (!res.ok) return setError(res.error);
+      setCancelling(false);
+      setReason("");
+      onCancelled?.();
+    });
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      title={`Take payment · ${peso(order.total)}`}
+      onClose={close}
+      title={cancelling ? "Cancel this order?" : `Take payment · ${peso(total)}`}
       footer={
+        cancelling ? (
+          <>
+            <Button variant="outline" disabled={busy} onClick={() => setCancelling(false)}>Back</Button>
+            <Button variant="outline" className="text-terracotta-600 ring-terracotta-600/40" disabled={busy || !reason.trim()} onClick={cancelOrder}>
+              {busy ? <Loader2 className="animate-spin" /> : <Ban />} Cancel order
+            </Button>
+          </>
+        ) : (
         <>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" className="mr-auto text-terracotta-600" disabled={busy} onClick={() => setCancelling(true)}><Ban /> Cancel order</Button>
+          <Button variant="outline" onClick={close}>Close</Button>
           <Button
-            disabled={busy || (m?.is_cash ? cash < order.total : m?.requires_reference ? reference.trim().length < 4 : false)}
+            disabled={busy || (m?.is_cash ? cash < total : m?.requires_reference ? reference.trim().length < 4 : false)}
             onClick={() =>
               start(async () => {
-                const res = await recordPayment(order.id, method, m?.is_cash ? cash : null, reference);
+                const res = await recordPayment(orderId, method, m?.is_cash ? cash : null, reference);
                 if (!res.ok) return setError(res.error);
+                const done = await payAndComplete(orderId);
+                if (!done.ok) return setError(done.error);
                 onDone(res.data.change);
               })
             }
           >
-            {busy ? <Loader2 className="animate-spin" /> : null} Record payment
+            {busy ? <Loader2 className="animate-spin" /> : <Check />} Paid — complete order
           </Button>
         </>
+        )
       }
     >
       {error ? <Alert tone="error" className="mb-3">{error}</Alert> : null}
+      {cancelling ? (
+        <div className="mb-4 space-y-2">
+          <p className="text-sm text-ink-muted">The order is removed from the queue and nothing is charged. Pick or type a reason:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {["Wrong order", "Duplicate order", "Customer didn't come", "Changed their mind"].map((r) => (
+              <button key={r} type="button" onClick={() => setReason(r)} className={cn("rounded-lg px-3 py-1.5 text-sm font-semibold ring-1", reason === r ? "bg-terracotta-600 text-cream-50 ring-terracotta-600" : "bg-white ring-bamboo-400/60")}>
+                {r}
+              </button>
+            ))}
+          </div>
+          <Input aria-label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} placeholder="Reason" />
+        </div>
+      ) : null}
+      <div className="mb-4 rounded-xl bg-white/70 p-3 ring-1 ring-bamboo-300/60">
+        <ul className="space-y-1.5 text-sm">
+          {meals.map((i, idx) => (
+            <li key={i.id ?? idx}>
+              <div className="flex justify-between gap-3">
+                <span><b>{i.quantity}×</b> {i.product_name} <span className="text-ink-muted">@ {peso(i.unit_price)}</span></span>
+                <span className="tabular-nums">{peso(i.line_total)}</span>
+              </div>
+              {addonsOf(i.id).map((a, j) => (
+                <div key={a.id ?? j} className="flex justify-between gap-3 pl-4 text-xs text-ink-muted">
+                  <span>+ {a.quantity}× {a.product_name} @ {peso(a.unit_price)}</span>
+                  <span className="tabular-nums">{peso(a.line_total)}</span>
+                </div>
+              ))}
+            </li>
+          ))}
+        </ul>
+        <dl className="mt-3 space-y-0.5 border-t border-bamboo-300/60 pt-2 text-sm">
+          <div className="flex justify-between"><dt>Subtotal</dt><dd className="tabular-nums">{peso(bill.subtotal)}</dd></div>
+          {bill.packaging_fee > 0 ? <div className="flex justify-between"><dt>Takeout packaging</dt><dd className="tabular-nums">{peso(bill.packaging_fee)}</dd></div> : null}
+          {bill.discount_total > 0 ? <div className="flex justify-between text-leaf-700"><dt>{bill.discount_reason || "Discount"}</dt><dd className="tabular-nums">−{peso(bill.discount_total)}</dd></div> : null}
+          <div className="flex items-baseline justify-between pt-1"><dt className="font-bold">Total</dt><dd className="font-display text-2xl font-extrabold text-forest-800">{peso(total)}</dd></div>
+        </dl>
+      </div>
+      {!cancelling ? (
+      <>
       <div className="mb-3 flex gap-2">
         {methods.map((x) => (
           <button key={x.code} type="button" onClick={() => setMethod(x.code)} className={cn("flex-1 rounded-lg py-2 font-bold", method === x.code ? "bg-wood-600 text-cream-50" : "bg-white ring-1 ring-bamboo-400/60")}>
@@ -176,12 +239,21 @@ function PaymentDialog({ open, onClose, order, methods, onDone }: { open: boolea
       {m?.is_cash ? (
         <Field label="Cash received" htmlFor="tender">
           <Input id="tender" type="number" inputMode="decimal" min={0} step="0.01" value={tendered} onChange={(e) => setTendered(e.target.value)} autoFocus />
-          {cash > 0 ? <p className={cn("text-right font-bold", cash >= order.total ? "text-leaf-700" : "text-terracotta-600")}>{cash >= order.total ? `Change ${peso(cash - order.total)}` : `Short ${peso(order.total - cash)}`}</p> : null}
+          <div className="mt-2 flex gap-1.5">
+            {[total, 100, 200, 500, 1000].filter((v, i) => i === 0 || v > total).slice(0, 4).map((v, i) => (
+              <button key={v} type="button" onClick={() => setTendered(String(v))} className="flex-1 rounded-lg bg-white py-1.5 text-sm font-bold ring-1 ring-bamboo-400/60">
+                {i === 0 ? "Exact" : peso(v).replace(".00", "")}
+              </button>
+            ))}
+          </div>
+          {cash > 0 ? <p className={cn("mt-1 text-right font-bold", cash >= total ? "text-leaf-700" : "text-terracotta-600")}>{cash >= total ? `Change ${peso(cash - total)}` : `Short ${peso(total - cash)}`}</p> : null}
         </Field>
       ) : m?.requires_reference ? (
         <Field label="Reference number" htmlFor="pref">
           <Input id="pref" value={reference} onChange={(e) => setReference(e.target.value)} maxLength={60} />
         </Field>
+      ) : null}
+      </>
       ) : null}
     </Dialog>
   );

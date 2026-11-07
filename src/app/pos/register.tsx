@@ -52,7 +52,8 @@ export function Register(props: {
   const [rewardCode, setRewardCode] = useState("");
   const [reward, setReward] = useState<RedemptionLookup | null>(null);
   const [discount, setDiscount] = useState<{ type: "percent" | "fixed"; value: string; reason: string }>({ type: "percent", value: "", reason: "" });
-  const [completeNow, setCompleteNow] = useState(false);
+  // Every POS sale is paid and served right away, so it goes straight to Completed
+  const completeNow = true;
   const [notes, setNotes] = useState("");
   const [quoteResult, setQuoteResult] = useState<{ key: string; quote: PosQuote | null; error: string | null } | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -102,7 +103,7 @@ export function Register(props: {
 
   useEffect(() => {
     saleKey.current = crypto.randomUUID();
-  }, [items, service, method, promo, appliedReward, discount, customer, tendered, reference, completeNow]);
+  }, [items, service, method, promo, appliedReward, discount, customer, tendered, reference]);
 
   // Packaging preview until the server quote arrives: per meal, add-on categories (drinks, extras) excluded
   const addonCats = new Set(categories.filter((c) => c.is_addon_category).map((c) => c.id));
@@ -143,7 +144,6 @@ export function Register(props: {
     setReward(null);
     setDiscount({ type: "percent", value: "", reason: "" });
     setNotes("");
-    setCompleteNow(false);
     setService("dine_in");
     setError(null);
     saleKey.current = crypto.randomUUID();
@@ -421,7 +421,6 @@ export function Register(props: {
               ) : selectedMethod?.requires_reference ? (
                 <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder={`${selectedMethod.name} reference no.`} className="h-11" maxLength={60} />
               ) : null}
-              <Checkbox label="Served now (mark completed)" checked={completeNow} onChange={(e) => setCompleteNow(e.target.checked)} />
               <Button size="xl" className="w-full" disabled={!canCharge} onClick={() => setConfirming(true)}>
                 Charge {peso(total)}
               </Button>

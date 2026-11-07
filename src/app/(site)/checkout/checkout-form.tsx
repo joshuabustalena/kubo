@@ -24,7 +24,8 @@ export function CheckoutForm({ user, methods, onlineEnabled, packagingFee, rewar
   const cart = useCart();
   const router = useRouter();
   const [service, setService] = useState<ServiceType>("dine_in");
-  const [method, setMethod] = useState(methods[0]?.code ?? "");
+  // Online orders are paid at the counter, so the cash method is used
+  const [method] = useState((methods.find((m) => m.is_cash) ?? methods[0])?.code ?? "");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [promoInput, setPromoInput] = useState("");
@@ -133,19 +134,14 @@ export function CheckoutForm({ user, methods, onlineEnabled, packagingFee, rewar
 
         <section className="paper p-5">
           <h2 className="font-display text-xl font-bold text-wood-800">Payment</h2>
-          {methods.length === 0 ? (
-            <Alert tone="error" className="mt-3">No payment methods are available online right now.</Alert>
+          {!method ? (
+            <Alert tone="error" className="mt-3">Online ordering is not available right now.</Alert>
           ) : (
-            <div className="mt-3 space-y-2" role="radiogroup" aria-label="Payment method">
-              {methods.map((m) => (
-                <label key={m.code} className={cn("flex cursor-pointer gap-3 rounded-xl border-2 p-3.5", method === m.code ? "border-forest-700 bg-leaf-50" : "border-bamboo-300 bg-cream-50")}>
-                  <input type="radio" name="method" value={m.code} checked={method === m.code} onChange={() => setMethod(m.code)} className="mt-1 accent-forest-700" />
-                  <span>
-                    <span className="font-bold">{m.name}</span>
-                    {m.instructions ? <span className="block text-sm text-ink-muted">{m.instructions}</span> : null}
-                  </span>
-                </label>
-              ))}
+            <div className="mt-3 flex gap-3 rounded-xl border-2 border-forest-700 bg-leaf-50 p-3.5">
+              <span>
+                <span className="font-bold">Pay at the counter</span>
+                <span className="block text-sm text-ink-muted">Show your order number at the counter and pay there. We&apos;ll serve your order right away.</span>
+              </span>
             </div>
           )}
           {selected?.requires_reference ? (

@@ -65,7 +65,7 @@ const saleSchema = quoteSchema.extend({
   discount_value: z.number().min(0).max(100_000).nullable(),
   discount_reason: z.string().max(200).default(""),
   override_grant: z.uuid().nullable(),
-  complete_now: z.boolean(),
+  complete_now: z.boolean().optional(),
   notes: z.string().max(500).default(""),
   idempotency_key: z.uuid(),
 });
@@ -92,7 +92,8 @@ export async function createPosSale(
     p_discount_value: v.discount_value || null,
     p_discount_reason: v.discount_reason,
     p_override_grant: v.override_grant,
-    p_complete_now: v.complete_now,
+    // Every POS sale is paid at once and served right away: always Completed
+    p_complete_now: true,
     p_notes: v.notes,
     p_idempotency_key: v.idempotency_key,
   });
@@ -172,6 +173,33 @@ export async function updateOrderStatus(orderId: string, status: string, note: s
   const supabase = await staffClient();
   if (!supabase) return denied;
   const { error } = await supabase.rpc("update_order_status", { p_order_id: orderId, p_status: status, p_note: note.slice(0, 300), p_override_grant: grant });
+  if (error) return toFailure(error);
+  revalidatePath("/pos/orders");
+  revalidatePath(`/pos/orders/${orderId}`);
+  revalidatePath(`/admin/orders/${orderId}`);
+  return ok(undefined);
+}
+
+/**
+ * Counter flow for online orders: if unpaid, record the payment (cash for the exact
+ * total unless a method is given), then mark it Completed. No kitchen stages.
+ */
+export async function payAndComplete(orderId: string): Promise<ActionResult> {
+  const supabase = await staffClient();
+  if (!supabase) return denied;
+  const { data: o, error: oe } = await supabase.from("orders").select("status, payment_status, total, payment_method_code").eq("id", orderId).single();
+  if (oe || !o) return { ok: false, error: "Order not found." };
+  if (o.status === "completed") return ok(undefined);
+  if (o.status === "cancelled") return { ok: false, error: "This order was cancelled." };
+  if (o.payment_status !== "paid") {
+    const { error } = await supabase.rpc("record_order_payment", { p_order_id: orderId, p_method: "cash", p_amount_tendered: Number(o.total), p_reference: "" });
+    if (error) return toFailure(error);
+  }
+  if (o.status === "pending") {
+    const { error } = await supabase.rpc("update_order_status", { p_order_id: orderId, p_status: "confirmed", p_note: "Paid at the counter", p_override_grant: null });
+    if (error) return toFailure(error);
+  }
+  const { error } = await supabase.rpc("update_order_status", { p_order_id: orderId, p_status: "completed", p_note: "Paid at the counter", p_override_grant: null });
   if (error) return toFailure(error);
   revalidatePath("/pos/orders");
   revalidatePath(`/pos/orders/${orderId}`);

@@ -72,7 +72,7 @@ export function relativeMinutes(value: string | Date): string {
 }
 
 export const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending: "Pending",
+  pending: "Pay at the counter",
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready for Pickup",
